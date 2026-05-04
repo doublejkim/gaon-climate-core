@@ -1,0 +1,15 @@
+package dev.gaonstack.gaonclimatecore.config
+
+import dev.gaonstack.gaonclimatecore.auth.AuthenticatedPrincipalArgumentResolver
+import org.springframework.context.annotation.Configuration
+import org.springframework.web.method.support.HandlerMethodArgumentResolver
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+
+@Configuration
+class WebMvcConfig(
+    private val authenticatedPrincipalArgumentResolver: AuthenticatedPrincipalArgumentResolver,
+) : WebMvcConfigurer {
+    override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {
+        resolvers.add(authenticatedPrincipalArgumentResolver)
+    }
+}
