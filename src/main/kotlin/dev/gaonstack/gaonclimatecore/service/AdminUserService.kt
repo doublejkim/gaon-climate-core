@@ -27,7 +27,7 @@ class AdminUserService(
         return AdminUserLookupResponse(
             user = user.toResponse(),
             devices = adminUserLookupRepository.findDevices(userId).map { it.toResponse() },
-            apiKeys = adminUserLookupRepository.findApiKeys(userId).map { it.toResponse() },
+            apiKey = adminUserLookupRepository.findApiKey(userId)?.toResponse(),
         )
     }
 

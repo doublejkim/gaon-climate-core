@@ -34,8 +34,8 @@ data class AdminUserLookupRequest(
 data class AdminUserLookupResponse(
     val user: UserResponse,
     val devices: List<DeviceResponse>,
-    @JsonProperty("api_keys")
-    val apiKeys: List<ApiKeyResponse>,
+    @JsonProperty("api_key")
+    val apiKey: ApiKeyResponse?,
 )
 
 data class UserResponse(

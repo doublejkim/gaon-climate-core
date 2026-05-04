@@ -107,7 +107,7 @@ class GaonClimateCoreApplicationTests(
                 jsonPath("$.data.user.email") { value("lookup@example.com") }
                 jsonPath("$.data.devices[0].device_key") { value("lookup-device") }
                 jsonPath("$.data.devices[0].name") { value("LOOKUP_DEVICE") }
-                jsonPath("$.data.api_keys[0].api_key_hash") { exists() }
+                jsonPath("$.data.api_key.api_key_hash") { exists() }
             }
     }
 
@@ -128,7 +128,7 @@ class GaonClimateCoreApplicationTests(
                 status { isOk() }
                 jsonPath("$.data.user.email") { value("no-device@example.com") }
                 jsonPath("$.data.devices") { isEmpty() }
-                jsonPath("$.data.api_keys") { isEmpty() }
+                jsonPath("$.data.api_key") { doesNotExist() }
             }
     }
 

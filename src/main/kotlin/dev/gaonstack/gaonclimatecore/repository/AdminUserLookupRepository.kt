@@ -35,10 +35,10 @@ class AdminUserLookupRepository(
             .orderBy(device.getNumber("id", Long::class.java).asc())
             .fetch()
 
-    fun findApiKeys(userId: Long): List<UserApiKey> =
+    fun findApiKey(userId: Long): UserApiKey? =
         queryFactory
             .selectFrom(apiKey)
             .where(apiKey.get("user", User::class.java).getNumber("id", Long::class.java).eq(userId))
             .orderBy(apiKey.getNumber("id", Long::class.java).asc())
-            .fetch()
+            .fetchFirst()
 }
