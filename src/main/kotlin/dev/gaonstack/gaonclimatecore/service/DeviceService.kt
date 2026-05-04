@@ -45,7 +45,7 @@ class DeviceService(
                 updatedAt = now,
             )
         )
-        val apiKey = createApiKey(device)
+        val apiKey = getOrCreateApiKey(device)
 
         return RegisterDeviceResponse(
             devices = listOf(device.toResponse()),
@@ -78,7 +78,7 @@ class DeviceService(
                 updatedAt = now,
             )
         )
-        val apiKey = createApiKey(device)
+        val apiKey = getOrCreateApiKey(device)
 
         return RegisterDeviceResponse(
             devices = listOf(device.toResponse()),
@@ -86,7 +86,13 @@ class DeviceService(
         )
     }
 
-    private fun createApiKey(device: Device): UserApiKey {
+    private fun getOrCreateApiKey(device: Device): UserApiKey {
+        val userId = device.user.id ?: throw ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "사용자 정보가 올바르지 않습니다.",
+        )
+        userApiKeyRepository.findFirstByUserIdOrderByIdAsc(userId)?.let { return it }
+
         val generated = apiKeyGenerator.generate()
         val now = LocalDateTime.now()
         return userApiKeyRepository.save(

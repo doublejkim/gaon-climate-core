@@ -1,6 +1,7 @@
 package dev.gaonstack.gaonclimatecore
 
 import dev.gaonstack.gaonclimatecore.domain.User
+import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
 import dev.gaonstack.gaonclimatecore.repository.UserRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -9,12 +10,14 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import kotlin.test.assertEquals
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class GaonClimateCoreApplicationTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val userRepository: UserRepository,
+    @Autowired private val userApiKeyRepository: UserApiKeyRepository,
 ) {
 
     @Test
@@ -139,5 +142,48 @@ class GaonClimateCoreApplicationTests(
                 status { isBadRequest() }
                 jsonPath("$.code") { value("BAD_REQUEST") }
             }
+    }
+
+    @Test
+    fun `admin device creation reuses existing user api key`() {
+        val user = userRepository.save(
+            User(
+                email = "reuse-key@example.com",
+                name = "키 재사용 사용자",
+            )
+        )
+
+        mockMvc.post("/admin/devices") {
+            header("X-Admin-Token", "test-admin-token")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "email": "reuse-key@example.com",
+                  "device_key": "reuse-device-1"
+                }
+            """.trimIndent()
+        }
+            .andExpect {
+                status { isCreated() }
+            }
+
+        val firstApiKey = userApiKeyRepository.findFirstByUserIdOrderByIdAsc(user.id!!)
+
+        mockMvc.post("/admin/devices") {
+            header("X-Admin-Token", "test-admin-token")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "email": "reuse-key@example.com",
+                  "device_key": "reuse-device-2"
+                }
+            """.trimIndent()
+        }
+            .andExpect {
+                status { isCreated() }
+                jsonPath("$.data.api_key_hash") { value(firstApiKey!!.apiKeyHash) }
+            }
+
+        assertEquals(1L, userApiKeyRepository.countByUserId(user.id!!))
     }
 }

@@ -20,7 +20,10 @@ CREATE TABLE user_api_keys (
                                updated_at DATETIME(6) NOT NULL,
 
                                CONSTRAINT fk_user_api_keys_user
-                                   FOREIGN KEY (user_id) REFERENCES users(id)
+                                   FOREIGN KEY (user_id) REFERENCES users(id),
+
+                               CONSTRAINT uk_user_api_keys_user
+                                   UNIQUE (user_id)
 );
 
 CREATE TABLE devices (

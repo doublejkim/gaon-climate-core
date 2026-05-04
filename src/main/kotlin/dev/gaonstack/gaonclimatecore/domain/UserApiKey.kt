@@ -9,17 +9,23 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_api_keys")
+@Table(
+    name = "user_api_keys",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_user_api_keys_user", columnNames = ["user_id"]),
+    ],
+)
 class UserApiKey(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     var user: User,
 
     @Column(name = "api_key_hash", nullable = false, unique = true)
@@ -50,4 +56,3 @@ class UserApiKey(
         const val STATUS_ACTIVE = "ACTIVE"
     }
 }
-
