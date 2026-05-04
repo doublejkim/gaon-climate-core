@@ -3,7 +3,6 @@ package dev.gaonstack.gaonclimatecore.api.dto
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 
 data class RegisterDeviceRequest(
     @JsonProperty("device_key")
@@ -52,7 +51,7 @@ data class ClimateMeasurementRequest(
     val temperatureC: BigDecimal?,
     val humidity: BigDecimal? = null,
     @JsonProperty("measured_at")
-    val measuredAt: OffsetDateTime?,
+    val measuredAt: LocalDateTime? = null,
 )
 
 data class ClimateMeasurementResponse(

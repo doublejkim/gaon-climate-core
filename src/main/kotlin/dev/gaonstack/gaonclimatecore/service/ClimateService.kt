@@ -17,8 +17,6 @@ import org.springframework.web.server.ResponseStatusException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 
 @Service
 class ClimateService(
@@ -37,9 +35,6 @@ class ClimateService(
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "API key와 device_key의 사용자가 일치하지 않습니다.")
         }
 
-        val measuredAt = request.measuredAt?.toUtcLocalDateTime()
-            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "measured_at 값이 필요합니다.")
-
         val now = LocalDateTime.now()
         val measurement = measurementRepository.save(
             DeviceMeasurement(
@@ -49,7 +44,7 @@ class ClimateService(
                     "temperature_c 값이 필요합니다.",
                 ),
                 humidity = request.humidity,
-                measuredAt = measuredAt,
+                measuredAt = now,
                 createdAt = now,
             )
         )
@@ -136,9 +131,6 @@ class ClimateService(
 
         return device
     }
-
-    private fun OffsetDateTime.toUtcLocalDateTime(): LocalDateTime =
-        withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime()
 
     private fun List<BigDecimal>.averageDecimal(): BigDecimal =
         fold(BigDecimal.ZERO, BigDecimal::add)
