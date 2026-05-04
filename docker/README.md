@@ -2,7 +2,7 @@
 
 MariaDB 10.11 local development database for `gaon-climate-core`.
 
-This Compose file runs only the database. Use the root `compose.yaml` to run the full application stack.
+This Compose file runs only the database. Use `docker/compose.yaml` to run the full application stack.
 
 ## Start
 
@@ -53,10 +53,10 @@ spring:
     password: testpwd
 ```
 
-To override values, copy `docker/.env.example` to `docker/.env` and edit it, then run:
+To override values, copy `docker/local-db.env.example` to `docker/.env.local-db` and edit it, then run:
 
 ```bash
-docker compose --env-file docker/.env -f docker/compose.local-db.yaml up -d
+docker compose --env-file docker/.env.local-db -f docker/compose.local-db.yaml up -d
 ```
 
 `docker/database.sql` runs only when the database volume is first created.

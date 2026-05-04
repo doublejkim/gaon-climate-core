@@ -1,0 +1,26 @@
+name: gaon-climate
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gaon-climate-core
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
+      APP_ADMIN_TOKEN: ${APP_ADMIN_TOKEN:?APP_ADMIN_TOKEN is required}
+      APP_CLIMATE_HISTORY_WINDOW_SECONDS: ${APP_CLIMATE_HISTORY_WINDOW_SECONDS:-3600}
+      APP_CLIMATE_HISTORY_BUCKET_SECONDS: ${APP_CLIMATE_HISTORY_BUCKET_SECONDS:-600}
+      LOG_PATH: /logs
+      TZ: ${TZ:-Asia/Seoul}
+    volumes:
+      - app_logs:/logs
+
+volumes:
+  app_logs:
