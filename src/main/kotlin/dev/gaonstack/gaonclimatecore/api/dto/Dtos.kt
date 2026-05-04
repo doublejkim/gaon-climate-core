@@ -1,6 +1,8 @@
 package dev.gaonstack.gaonclimatecore.api.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import dev.gaonstack.gaonclimatecore.validation.ValidAdminUserLookup
+import org.springframework.web.bind.annotation.BindParam
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -22,11 +24,55 @@ data class AdminCreateDeviceRequest(
     val locationName: String? = null,
 )
 
+@ValidAdminUserLookup
+data class AdminUserLookupRequest(
+    @param:BindParam("user_id")
+    val userId: Long? = null,
+    val email: String? = null,
+)
+
+data class AdminUserLookupResponse(
+    val user: UserResponse,
+    val devices: List<DeviceResponse>,
+    @JsonProperty("api_keys")
+    val apiKeys: List<ApiKeyResponse>,
+)
+
+data class UserResponse(
+    val id: Long,
+    val email: String,
+    val name: String,
+    val status: String,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+    @JsonProperty("updated_at")
+    val updatedAt: LocalDateTime,
+)
+
+data class ApiKeyResponse(
+    val id: Long,
+    @JsonProperty("api_key_hash")
+    val apiKeyHash: String,
+    @JsonProperty("key_prefix")
+    val keyPrefix: String,
+    val name: String?,
+    val status: String,
+    @JsonProperty("last_used_at")
+    val lastUsedAt: LocalDateTime?,
+    @JsonProperty("expires_at")
+    val expiresAt: LocalDateTime?,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+    @JsonProperty("updated_at")
+    val updatedAt: LocalDateTime,
+)
+
 data class RegisterDeviceResponse(
-    val device: DeviceResponse,
+    val devices: List<DeviceResponse>,
     @JsonProperty("api_key_hash")
     val apiKeyHash: String,
 )
+
 
 data class DeviceResponse(
     val id: Long,

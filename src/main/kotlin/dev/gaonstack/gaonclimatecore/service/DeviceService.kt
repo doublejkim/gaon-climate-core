@@ -48,7 +48,7 @@ class DeviceService(
         val apiKey = createApiKey(device)
 
         return RegisterDeviceResponse(
-            device = device.toResponse(),
+            devices = listOf(device.toResponse()),
             apiKeyHash = apiKey.apiKeyHash,
         )
     }
@@ -81,7 +81,7 @@ class DeviceService(
         val apiKey = createApiKey(device)
 
         return RegisterDeviceResponse(
-            device = device.toResponse(),
+            devices = listOf(device.toResponse()),
             apiKeyHash = apiKey.apiKeyHash,
         )
     }
