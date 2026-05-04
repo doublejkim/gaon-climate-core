@@ -1,0 +1,5 @@
+app:
+  climate:
+    history:
+      window-seconds: 3600
+      bucket-seconds: 600

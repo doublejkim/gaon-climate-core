@@ -126,8 +126,9 @@ data class ClimateCurrentResponse(
 data class ClimateHistoryPointResponse(
     val from: LocalDateTime,
     val to: LocalDateTime,
+    @JsonProperty("measured_at")
+    val measuredAt: LocalDateTime?,
     @JsonProperty("temperature_c")
-    val temperatureC: BigDecimal,
+    val temperatureC: BigDecimal?,
     val humidity: BigDecimal?,
-    val count: Int,
 )

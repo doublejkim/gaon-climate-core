@@ -44,16 +44,8 @@ class AuthenticationFilter(
                 }
 
                 request.isClimateReadRequest() -> {
-                    val user = authService.requireUser(request.getHeader("Authorization"))
-                    request.setAttribute(
-                        AuthRequestAttributes.USER,
-                        AuthenticatedUser(
-                            userId = user.id ?: throw ResponseStatusException(
-                                HttpStatus.UNAUTHORIZED,
-                                "사용자 정보가 올바르지 않습니다.",
-                            ),
-                        ),
-                    )
+                    val apiKey = authService.requireApiKey(request.getHeader("Authorization"))
+                    request.setAttribute(AuthRequestAttributes.API_KEY, apiKey)
                 }
             }
 

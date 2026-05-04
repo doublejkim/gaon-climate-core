@@ -9,19 +9,22 @@ import dev.gaonstack.gaonclimatecore.domain.Device
 import dev.gaonstack.gaonclimatecore.domain.DeviceMeasurement
 import dev.gaonstack.gaonclimatecore.repository.DeviceMeasurementRepository
 import dev.gaonstack.gaonclimatecore.repository.DeviceRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDateTime
 
 @Service
 class ClimateService(
     private val deviceRepository: DeviceRepository,
     private val measurementRepository: DeviceMeasurementRepository,
+    @Value("\${app.climate.history.window-seconds:3600}")
+    private val historyWindowSeconds: Long,
+    @Value("\${app.climate.history.bucket-seconds:600}")
+    private val historyBucketSeconds: Long,
 ) {
     @Transactional
     fun saveMeasurement(
@@ -64,8 +67,8 @@ class ClimateService(
     }
 
     @Transactional(readOnly = true)
-    fun current(userId: Long, deviceKey: String): ClimateCurrentResponse {
-        val device = activeDevice(deviceKey, userId)
+    fun current(authenticatedApiKey: AuthenticatedApiKey, deviceKey: String): ClimateCurrentResponse {
+        val device = activeDevice(deviceKey, authenticatedApiKey)
         val measurement = measurementRepository.findFirstByDeviceDeviceKeyOrderByMeasuredAtDesc(device.deviceKey)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "측정 데이터가 없습니다.")
 
@@ -78,32 +81,40 @@ class ClimateService(
     }
 
     @Transactional(readOnly = true)
-    fun lastHour(userId: Long, deviceKey: String): List<ClimateHistoryPointResponse> {
-        val device = activeDevice(deviceKey, userId)
+    fun lastHour(authenticatedApiKey: AuthenticatedApiKey, deviceKey: String): List<ClimateHistoryPointResponse> {
+        val device = activeDevice(deviceKey, authenticatedApiKey)
         val to = LocalDateTime.now()
-        val from = to.minusHours(1)
+        val from = to.minusSeconds(historyWindowSeconds)
+        val bucketCount = historyBucketCount()
         val measurements = measurementRepository
             .findByDeviceDeviceKeyAndMeasuredAtBetweenOrderByMeasuredAtAsc(device.deviceKey, from, to)
 
-        return (0 until 6).mapNotNull { index ->
-            val bucketFrom = from.plusMinutes(index * 10L)
-            val bucketTo = bucketFrom.plusMinutes(10)
-            val bucket = measurements.filter {
+        return (0 until bucketCount).map { index ->
+            val bucketFrom = from.plusSeconds(index * historyBucketSeconds)
+            val bucketTo = bucketFrom.plusSeconds(historyBucketSeconds)
+            val measurement = measurements.lastOrNull {
                 !it.measuredAt.isBefore(bucketFrom) && it.measuredAt.isBefore(bucketTo)
             }
 
-            if (bucket.isEmpty()) {
-                null
-            } else {
-                ClimateHistoryPointResponse(
-                    from = bucketFrom,
-                    to = bucketTo,
-                    temperatureC = bucket.map { it.temperature }.averageDecimal(),
-                    humidity = bucket.mapNotNull { it.humidity }.averageDecimalOrNull(),
-                    count = bucket.size,
-                )
-            }
+            ClimateHistoryPointResponse(
+                from = bucketFrom,
+                to = bucketTo,
+                measuredAt = measurement?.measuredAt,
+                temperatureC = measurement?.temperature,
+                humidity = measurement?.humidity,
+            )
         }
+    }
+
+    private fun historyBucketCount(): Int {
+        if (historyWindowSeconds <= 0 || historyBucketSeconds <= 0) {
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "온습도 변동 조회 설정이 올바르지 않습니다.")
+        }
+        if (historyWindowSeconds % historyBucketSeconds != 0L) {
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "온습도 변동 조회 구간 설정이 올바르지 않습니다.")
+        }
+
+        return (historyWindowSeconds / historyBucketSeconds).toInt()
     }
 
     @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
@@ -123,19 +134,13 @@ class ClimateService(
         return device
     }
 
-    private fun activeDevice(deviceKey: String, userId: Long): Device {
+    private fun activeDevice(deviceKey: String, authenticatedApiKey: AuthenticatedApiKey): Device {
         val device = activeDevice(deviceKey)
-        if (device.user.id != userId) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "사용자와 device_key가 일치하지 않습니다.")
+        if (device.user.id != authenticatedApiKey.userId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "API key와 device_key의 사용자가 일치하지 않습니다.")
         }
 
         return device
     }
 
-    private fun List<BigDecimal>.averageDecimal(): BigDecimal =
-        fold(BigDecimal.ZERO, BigDecimal::add)
-            .divide(BigDecimal(size), 2, RoundingMode.HALF_UP)
-
-    private fun List<BigDecimal>.averageDecimalOrNull(): BigDecimal? =
-        takeIf { it.isNotEmpty() }?.averageDecimal()
 }

@@ -5,7 +5,6 @@ import dev.gaonstack.gaonclimatecore.api.dto.ClimateHistoryPointResponse
 import dev.gaonstack.gaonclimatecore.api.dto.ClimateMeasurementRequest
 import dev.gaonstack.gaonclimatecore.api.dto.ClimateMeasurementResponse
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedApiKey
-import dev.gaonstack.gaonclimatecore.auth.AuthenticatedUser
 import dev.gaonstack.gaonclimatecore.service.ClimateService
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
@@ -34,14 +33,14 @@ class ClimateController(
     @GetMapping("/{deviceKey}/current")
     fun current(
         @PathVariable deviceKey: String,
-        user: AuthenticatedUser,
+        apiKey: AuthenticatedApiKey,
     ): ClimateCurrentResponse =
-        climateService.current(user.userId, deviceKey)
+        climateService.current(apiKey, deviceKey)
 
     @GetMapping("/{deviceKey}/last-hour")
     fun lastHour(
         @PathVariable deviceKey: String,
-        user: AuthenticatedUser,
+        apiKey: AuthenticatedApiKey,
     ): List<ClimateHistoryPointResponse> =
-        climateService.lastHour(user.userId, deviceKey)
+        climateService.lastHour(apiKey, deviceKey)
 }

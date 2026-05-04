@@ -1,0 +1,17 @@
+logging:
+  level:
+    root: DEBUG
+    dev.gaonstack.gaonclimatecore: DEBUG
+    org.hibernate.SQL: DEBUG
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  climate:
+    history:
+      window-seconds: 3600
+      bucket-seconds: 600
