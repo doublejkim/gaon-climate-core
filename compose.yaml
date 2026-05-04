@@ -1,0 +1,57 @@
+name: gaon-climate
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gaon-climate-core
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/${MARIADB_DATABASE:-gaon_climate}
+      SPRING_DATASOURCE_USERNAME: ${MARIADB_USER:-gaon}
+      SPRING_DATASOURCE_PASSWORD: ${MARIADB_PASSWORD:?MARIADB_PASSWORD is required}
+      APP_ADMIN_TOKEN: ${APP_ADMIN_TOKEN:?APP_ADMIN_TOKEN is required}
+      APP_CLIMATE_HISTORY_WINDOW_SECONDS: ${APP_CLIMATE_HISTORY_WINDOW_SECONDS:-3600}
+      APP_CLIMATE_HISTORY_BUCKET_SECONDS: ${APP_CLIMATE_HISTORY_BUCKET_SECONDS:-600}
+      LOG_PATH: /logs
+      TZ: ${TZ:-Asia/Seoul}
+    volumes:
+      - app_logs:/logs
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: gaon-climate-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD is required}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-gaon_climate}
+      MARIADB_USER: ${MARIADB_USER:-gaon}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?MARIADB_PASSWORD is required}
+      TZ: ${TZ:-Asia/Seoul}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/database.sql:/docker-entrypoint-initdb.d/001_database.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mariadb-admin ping -h 127.0.0.1 -u root -p$${MARIADB_ROOT_PASSWORD} --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mariadb_data:
+  app_logs:
