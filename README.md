@@ -86,6 +86,7 @@ APP_CLIMATE_HISTORY_BUCKET_SECONDS=600
 
 Docker 관련 파일은 `docker/` 디렉토리에 있습니다.
 
+- Docker Compose v2 명령인 `docker compose`를 기준으로 합니다.
 - `docker/compose.yaml`: 앱 컨테이너 실행용입니다. MariaDB는 별도 운영을 전제로 합니다.
 - `docker/compose.local-db.yaml`: 로컬 개발용 MariaDB만 실행합니다.
 - `docker/full.env.example`: 앱 실행용 환경변수 예시입니다.
@@ -93,11 +94,53 @@ Docker 관련 파일은 `docker/` 디렉토리에 있습니다.
 
 QNAP NAS에서 public Git repo를 pull 받아 실행하는 절차는 [docs/qnap-docker.md](docs/qnap-docker.md)를 기준으로 진행합니다.
 
+Compose v2 설치 확인:
+
+```bash
+docker compose version
+```
+
 요약:
 
 ```bash
 cp docker/full.env.example docker/.env
 vi docker/.env
+docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
+```
+
+### 특정 태그 또는 특정 빌드로 배포
+
+앱 이미지는 Docker build 단계에서 public Git repo를 받아 빌드합니다. 기본 repo와 ref는 다음과 같습니다.
+
+- `REPOSITORY_URL`: `https://github.com/doublejkim/gaon-climate-core.git`
+- `GIT_REF`: `main`
+
+특정 버전을 배포하려면 `GIT_REF`에 브랜치명, 태그명, 또는 커밋 SHA를 지정합니다. 배포 서버에서 해당 ref를 public repo에서 접근할 수 있어야 합니다.
+
+필요 조건:
+
+- 배포할 코드가 `https://github.com/doublejkim/gaon-climate-core`에 push되어 있어야 합니다.
+- 태그로 배포할 경우 해당 태그가 remote에 push되어 있어야 합니다.
+- 커밋 SHA로 배포할 경우 해당 커밋이 remote branch 또는 tag에서 접근 가능한 상태여야 합니다.
+- 배포 서버가 Docker build 중 GitHub와 Gradle dependency repository에 접근할 수 있어야 합니다.
+
+태그 배포 예시:
+
+```bash
+GIT_REF=v1.0.0 docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
+```
+
+특정 커밋 SHA 배포 예시:
+
+```bash
+GIT_REF=abc1234 docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
+```
+
+repo URL을 명시해서 빌드해야 하는 경우:
+
+```bash
+REPOSITORY_URL=https://github.com/doublejkim/gaon-climate-core.git \
+GIT_REF=v1.0.0 \
 docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
 ```
 

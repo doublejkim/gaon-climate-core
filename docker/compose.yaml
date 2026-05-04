@@ -3,8 +3,11 @@ name: gaon-climate
 services:
   app:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      args:
+        REPOSITORY_URL: ${REPOSITORY_URL:-https://github.com/doublejkim/gaon-climate-core.git}
+        GIT_REF: ${GIT_REF:-main}
     container_name: gaon-climate-core
     restart: unless-stopped
     ports:

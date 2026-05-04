@@ -4,16 +4,16 @@ MariaDB 10.11 local development database for `gaon-climate-core`.
 
 This Compose file runs only the database. Use `docker/compose.yaml` to run the full application stack.
 
+This project uses Docker Compose v2 commands:
+
+```bash
+docker compose version
+```
+
 ## Start
 
 ```bash
 docker compose -f docker/compose.local-db.yaml up -d
-```
-
-If your Docker installation uses Compose v1:
-
-```bash
-docker-compose -f docker/compose.local-db.yaml up -d
 ```
 
 ## Stop
@@ -26,12 +26,6 @@ docker compose -f docker/compose.local-db.yaml down
 
 ```bash
 docker compose -f docker/compose.local-db.yaml down -v
-```
-
-If your Docker installation uses Compose v1:
-
-```bash
-docker-compose -f docker/compose.local-db.yaml down -v
 ```
 
 ## Default Connection
@@ -66,6 +60,6 @@ docker compose --env-file docker/.env.local-db -f docker/compose.local-db.yaml u
 MariaDB only applies `MARIADB_USER` and `MARIADB_PASSWORD` when the data volume is first created. If the container was created with different credentials, reset the development volume:
 
 ```bash
-docker-compose -f docker/compose.local-db.yaml down -v
-docker-compose -f docker/compose.local-db.yaml up -d
+docker compose -f docker/compose.local-db.yaml down -v
+docker compose -f docker/compose.local-db.yaml up -d
 ```
