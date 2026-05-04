@@ -1,5 +1,7 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.controller
 
+import dev.gaonstack.gaonclimatecore.api.dto.AdminCreateDeviceRequest
+import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
 import dev.gaonstack.gaonclimatecore.service.DeviceService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
@@ -31,4 +33,3 @@ class AdminController(
         return deviceService.createFromAdmin(request)
     }
 }
-

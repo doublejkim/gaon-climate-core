@@ -1,4 +1,4 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.response
 
 data class ApiResponse<T>(
     val code: String,

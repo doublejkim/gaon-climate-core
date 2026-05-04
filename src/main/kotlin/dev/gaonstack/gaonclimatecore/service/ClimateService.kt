@@ -1,10 +1,10 @@
 package dev.gaonstack.gaonclimatecore.service
 
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedApiKey
-import dev.gaonstack.gaonclimatecore.api.ClimateCurrentResponse
-import dev.gaonstack.gaonclimatecore.api.ClimateHistoryPointResponse
-import dev.gaonstack.gaonclimatecore.api.ClimateMeasurementRequest
-import dev.gaonstack.gaonclimatecore.api.ClimateMeasurementResponse
+import dev.gaonstack.gaonclimatecore.api.dto.ClimateCurrentResponse
+import dev.gaonstack.gaonclimatecore.api.dto.ClimateHistoryPointResponse
+import dev.gaonstack.gaonclimatecore.api.dto.ClimateMeasurementRequest
+import dev.gaonstack.gaonclimatecore.api.dto.ClimateMeasurementResponse
 import dev.gaonstack.gaonclimatecore.domain.Device
 import dev.gaonstack.gaonclimatecore.domain.DeviceMeasurement
 import dev.gaonstack.gaonclimatecore.repository.DeviceMeasurementRepository
@@ -69,8 +69,8 @@ class ClimateService(
     }
 
     @Transactional(readOnly = true)
-    fun current(deviceKey: String): ClimateCurrentResponse {
-        val device = activeDevice(deviceKey)
+    fun current(userId: Long, deviceKey: String): ClimateCurrentResponse {
+        val device = activeDevice(deviceKey, userId)
         val measurement = measurementRepository.findFirstByDeviceDeviceKeyOrderByMeasuredAtDesc(device.deviceKey)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "측정 데이터가 없습니다.")
 
@@ -83,8 +83,8 @@ class ClimateService(
     }
 
     @Transactional(readOnly = true)
-    fun lastHour(deviceKey: String): List<ClimateHistoryPointResponse> {
-        val device = activeDevice(deviceKey)
+    fun lastHour(userId: Long, deviceKey: String): List<ClimateHistoryPointResponse> {
+        val device = activeDevice(deviceKey, userId)
         val to = LocalDateTime.now()
         val from = to.minusHours(1)
         val measurements = measurementRepository
@@ -123,6 +123,15 @@ class ClimateService(
 
         if (device.status != Device.STATUS_ACTIVE) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "비활성 device_key 입니다.")
+        }
+
+        return device
+    }
+
+    private fun activeDevice(deviceKey: String, userId: Long): Device {
+        val device = activeDevice(deviceKey)
+        if (device.user.id != userId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "사용자와 device_key가 일치하지 않습니다.")
         }
 
         return device

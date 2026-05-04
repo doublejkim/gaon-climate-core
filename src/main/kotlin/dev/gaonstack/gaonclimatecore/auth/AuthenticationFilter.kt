@@ -1,7 +1,7 @@
 package dev.gaonstack.gaonclimatecore.auth
 
-import dev.gaonstack.gaonclimatecore.api.ApiResponse
-import dev.gaonstack.gaonclimatecore.api.apiErrorCode
+import dev.gaonstack.gaonclimatecore.api.response.ApiResponse
+import dev.gaonstack.gaonclimatecore.api.response.apiErrorCode
 import dev.gaonstack.gaonclimatecore.service.AuthService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -42,6 +42,19 @@ class AuthenticationFilter(
                     val apiKey = authService.requireApiKey(request.getHeader("Authorization"))
                     request.setAttribute(AuthRequestAttributes.API_KEY, apiKey)
                 }
+
+                request.isClimateReadRequest() -> {
+                    val user = authService.requireUser(request.getHeader("Authorization"))
+                    request.setAttribute(
+                        AuthRequestAttributes.USER,
+                        AuthenticatedUser(
+                            userId = user.id ?: throw ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "사용자 정보가 올바르지 않습니다.",
+                            ),
+                        ),
+                    )
+                }
             }
 
             filterChain.doFilter(request, response)
@@ -61,4 +74,7 @@ class AuthenticationFilter(
 
     private fun HttpServletRequest.isClimateMeasurementRequest(): Boolean =
         method.equals("POST", ignoreCase = true) && requestURI.startsWith("/climate/")
+
+    private fun HttpServletRequest.isClimateReadRequest(): Boolean =
+        method.equals("GET", ignoreCase = true) && requestURI.startsWith("/climate/")
 }

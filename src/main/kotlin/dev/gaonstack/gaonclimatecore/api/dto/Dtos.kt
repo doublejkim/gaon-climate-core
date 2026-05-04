@@ -1,4 +1,4 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal

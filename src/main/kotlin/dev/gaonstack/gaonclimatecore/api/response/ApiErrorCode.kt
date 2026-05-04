@@ -1,4 +1,4 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.response
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode

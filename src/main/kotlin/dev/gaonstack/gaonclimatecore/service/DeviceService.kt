@@ -1,9 +1,9 @@
 package dev.gaonstack.gaonclimatecore.service
 
-import dev.gaonstack.gaonclimatecore.api.AdminCreateDeviceRequest
-import dev.gaonstack.gaonclimatecore.api.DeviceResponse
-import dev.gaonstack.gaonclimatecore.api.RegisterDeviceRequest
-import dev.gaonstack.gaonclimatecore.api.RegisterDeviceResponse
+import dev.gaonstack.gaonclimatecore.api.dto.AdminCreateDeviceRequest
+import dev.gaonstack.gaonclimatecore.api.dto.DeviceResponse
+import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceRequest
+import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
 import dev.gaonstack.gaonclimatecore.domain.Device
 import dev.gaonstack.gaonclimatecore.domain.UserApiKey
 import dev.gaonstack.gaonclimatecore.repository.DeviceRepository

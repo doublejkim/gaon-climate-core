@@ -1,4 +1,4 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.response
 
 import org.springframework.core.MethodParameter
 import org.springframework.http.MediaType

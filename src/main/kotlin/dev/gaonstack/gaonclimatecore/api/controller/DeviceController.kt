@@ -1,5 +1,7 @@
-package dev.gaonstack.gaonclimatecore.api
+package dev.gaonstack.gaonclimatecore.api.controller
 
+import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceRequest
+import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedUser
 import dev.gaonstack.gaonclimatecore.service.DeviceService
 import org.springframework.http.HttpStatus
