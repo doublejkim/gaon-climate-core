@@ -8,6 +8,7 @@ import java.time.LocalDateTime
 
 interface DeviceMeasurementRepository : JpaRepository<DeviceMeasurement, Long> {
     fun findFirstByDeviceDeviceKeyOrderByMeasuredAtDesc(deviceKey: String): DeviceMeasurement?
+    fun findFirstByDeviceIdOrderByMeasuredAtDesc(deviceId: Long): DeviceMeasurement?
 
     fun findByDeviceDeviceKeyAndMeasuredAtBetweenOrderByMeasuredAtAsc(
         deviceKey: String,

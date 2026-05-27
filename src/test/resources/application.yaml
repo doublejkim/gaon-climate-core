@@ -11,4 +11,9 @@ spring:
 
 app:
   admin-token: test-admin-token
+  jwt:
+    secret: test-jwt-secret-key-must-be-at-least-32-chars-long
+    access-token-expiry-seconds: 86400
+  password:
+    peppers: test-pepper-key-0
 

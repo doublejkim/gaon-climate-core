@@ -16,6 +16,7 @@ class AuthService(
     private val userRepository: UserRepository,
     private val userApiKeyRepository: UserApiKeyRepository,
 ) {
+    // 2.1.1. Bearer 토큰(user id 또는 email)으로 활성 사용자 조회 — 디바이스 등록 시 유저 식별에 사용
     @Transactional(readOnly = true)
     fun requireUser(authorization: String?): User {
         val token = bearerToken(authorization)
@@ -29,6 +30,7 @@ class AuthService(
         return user
     }
 
+    // 2.1.2. API key 해시로 유효한 api key 조회 및 last_used_at 갱신 — 온도/습도 저장 및 조회 시 인증에 사용
     @Transactional
     fun requireApiKey(authorization: String?): AuthenticatedApiKey {
         val token = bearerToken(authorization)

@@ -21,6 +21,12 @@ class User(
     @Column(nullable = false, length = 100)
     var name: String,
 
+    @Column(length = 60)
+    var password: String? = null,
+
+    @Column(name = "password_key_index", nullable = false)
+    var passwordKeyIndex: Int = 0,
+
     @Column(nullable = false, length = 30)
     var status: String = STATUS_ACTIVE,
 

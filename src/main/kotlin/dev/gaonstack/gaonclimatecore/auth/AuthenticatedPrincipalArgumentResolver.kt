@@ -14,7 +14,8 @@ import org.springframework.web.server.ResponseStatusException
 class AuthenticatedPrincipalArgumentResolver : HandlerMethodArgumentResolver {
     override fun supportsParameter(parameter: MethodParameter): Boolean =
         parameter.parameterType == AuthenticatedUser::class.java ||
-            parameter.parameterType == AuthenticatedApiKey::class.java
+            parameter.parameterType == AuthenticatedApiKey::class.java ||
+            parameter.parameterType == AuthenticatedJwtUser::class.java
 
     override fun resolveArgument(
         parameter: MethodParameter,
@@ -25,6 +26,7 @@ class AuthenticatedPrincipalArgumentResolver : HandlerMethodArgumentResolver {
         val attributeName = when (parameter.parameterType) {
             AuthenticatedUser::class.java -> AuthRequestAttributes.USER
             AuthenticatedApiKey::class.java -> AuthRequestAttributes.API_KEY
+            AuthenticatedJwtUser::class.java -> AuthRequestAttributes.JWT_USER
             else -> throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다.")
         }
 

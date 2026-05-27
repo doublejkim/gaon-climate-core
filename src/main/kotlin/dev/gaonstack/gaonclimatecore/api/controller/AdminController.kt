@@ -27,6 +27,7 @@ class AdminController(
     @Value("\${app.admin-token:dev-admin-token}")
     private val adminToken: String,
 ) {
+    // 3.1.1. 관리자용 디바이스 및 api key 생성: X-Admin-Token 검증 후 email+name 기반 디바이스 등록, api_key_hash 반환
     @PostMapping("/devices")
     @ResponseStatus(HttpStatus.CREATED)
     fun createDevice(
@@ -38,6 +39,7 @@ class AdminController(
         return deviceService.createFromAdmin(request)
     }
 
+    // 3.2.1. 관리자용 단일 유저 정보 및 api key 조회: X-Admin-Token 검증 후 user_id 또는 email로 유저+디바이스+api_key 정보 반환
     @GetMapping("/users")
     fun getUser(
         @RequestHeader("X-Admin-Token", required = false) adminTokenHeader: String?,

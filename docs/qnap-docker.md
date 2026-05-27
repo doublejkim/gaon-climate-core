@@ -182,6 +182,49 @@ docker logs -f gaon-climate-core
 - `local`, `dev`: 1일 단위 파일명, 7일 보관
 - `prod`: 1시간 단위 파일명, 7일 보관
 
+## 문제 해결
+
+### `0.0.0.0:8080: bind: address already in use`
+
+다음 에러는 Docker build 문제가 아니라 컨테이너 실행 시 NAS 호스트의 `8080` 포트를 이미 다른 프로세스나 컨테이너가 사용 중이라는 뜻입니다.
+
+```text
+failed to bind port 0.0.0.0:8080/tcp: listen tcp4 0.0.0.0:8080: bind: address already in use
+```
+
+현재 Compose 설정은 `docker/.env`의 `APP_PORT` 값을 호스트 포트로 사용합니다.
+
+```env
+APP_PORT=8080
+```
+
+먼저 `8080`을 쓰는 컨테이너가 있는지 확인합니다.
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+기존 `gaon-climate-core` 컨테이너가 남아 있다면 정리한 뒤 다시 실행합니다.
+
+```bash
+docker compose --env-file docker/.env -f docker/compose.yaml down
+docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
+```
+
+다른 서비스가 `8080`을 사용 중이라면 `docker/.env`에서 앱의 호스트 포트를 바꿉니다. 예를 들어 NAS에서 `18080`으로 열려면 다음처럼 변경합니다.
+
+```env
+APP_PORT=18080
+```
+
+그 다음 다시 실행합니다.
+
+```bash
+docker compose --env-file docker/.env -f docker/compose.yaml up -d --build
+```
+
+이 경우 접속 주소도 `http://NAS주소:18080`으로 바뀝니다. 컨테이너 내부 포트는 계속 `8080`이므로 `docker/compose.yaml`의 오른쪽 `:8080`은 변경하지 않습니다.
+
 ## 중지
 
 컨테이너를 중지하고 Compose 리소스를 정리합니다.

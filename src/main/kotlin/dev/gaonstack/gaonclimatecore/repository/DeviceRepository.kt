@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface DeviceRepository : JpaRepository<Device, Long> {
     fun existsByDeviceKey(deviceKey: String): Boolean
     fun findByDeviceKey(deviceKey: String): Device?
+    fun findAllByUserId(userId: Long): List<Device>
 }
 

@@ -132,3 +132,44 @@ data class ClimateHistoryPointResponse(
     val temperatureC: BigDecimal?,
     val humidity: BigDecimal?,
 )
+
+// 2.2.1. 회원가입 요청
+data class SignUpRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 2.2.2. 로그인 요청
+data class LoginRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 2.2.2. 로그인 응답 (액세스토큰 + 리프레쉬토큰)
+data class LoginResponse(
+    @JsonProperty("access_token")
+    val accessToken: String,
+    @JsonProperty("refresh_token")
+    val refreshToken: String,
+)
+
+// 2.2.3. 유저 디바이스 목록 응답 항목
+data class UserDeviceResponse(
+    val id: Long,
+    val name: String,
+    @JsonProperty("location_name")
+    val locationName: String?,
+    val status: String,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+)
+
+// 2.2.4. 유저의 특정 디바이스 최신 온도/습도 응답
+data class UserDeviceMeasurementResponse(
+    @JsonProperty("device_id")
+    val deviceId: Long,
+    val temperature: BigDecimal,
+    val humidity: BigDecimal?,
+    @JsonProperty("measured_at")
+    val measuredAt: LocalDateTime,
+)
