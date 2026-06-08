@@ -14,6 +14,36 @@ data class RegisterDeviceRequest(
     val locationName: String? = null,
 )
 
+// 3.0.1. 관리자 로그인 요청
+data class AdminLoginRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 3.0.1. 관리자 로그인 응답 (관리자 JWT 액세스토큰)
+data class AdminLoginResponse(
+    @JsonProperty("access_token")
+    val accessToken: String,
+)
+
+// 3.3.1. 관리자 계정 생성 요청 (X-Admin-Token 부트스트랩 토큰으로 호출)
+data class AdminCreateRequest(
+    val email: String?,
+    val password: String?,
+    // 미지정 시 ADMIN
+    val role: String? = null,
+)
+
+// 3.3.1. 관리자 계정 생성 응답 (password 는 응답하지 않음)
+data class AdminCreateResponse(
+    val id: Long,
+    val email: String,
+    val role: String,
+    val status: String,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+)
+
 data class AdminCreateDeviceRequest(
     val email: String?,
     @JsonProperty("device_name")

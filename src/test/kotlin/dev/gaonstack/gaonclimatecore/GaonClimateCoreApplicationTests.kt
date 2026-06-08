@@ -1,6 +1,9 @@
 package dev.gaonstack.gaonclimatecore
 
+import dev.gaonstack.gaonclimatecore.auth.AdminJwtProvider
+import dev.gaonstack.gaonclimatecore.domain.AdminUser
 import dev.gaonstack.gaonclimatecore.domain.User
+import dev.gaonstack.gaonclimatecore.repository.AdminUserRepository
 import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
 import dev.gaonstack.gaonclimatecore.repository.UserRepository
 import org.junit.jupiter.api.Test
@@ -18,10 +21,78 @@ class GaonClimateCoreApplicationTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val userRepository: UserRepository,
     @Autowired private val userApiKeyRepository: UserApiKeyRepository,
+    @Autowired private val adminUserRepository: AdminUserRepository,
+    @Autowired private val adminJwtProvider: AdminJwtProvider,
 ) {
+
+    // 활성 관리자 1명을 보장하고 그 관리자 JWT 로 Authorization 헤더 값을 생성
+    private fun adminBearer(): String {
+        val admin = adminUserRepository.findByEmail("admin@example.com")
+            ?: adminUserRepository.save(
+                AdminUser(
+                    email = "admin@example.com",
+                    password = "unused-in-token-path",
+                )
+            )
+        return "Bearer ${adminJwtProvider.createAccessToken(admin.id!!, admin.role)}"
+    }
 
     @Test
     fun contextLoads() {
+    }
+
+    @Test
+    fun `admin account is created with bootstrap token and can log in`() {
+        mockMvc.post("/admin/admins") {
+            header("X-Admin-Token", "test-admin-token")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "email": "bootstrap-admin@example.com",
+                  "password": "admin-pass-1234"
+                }
+            """.trimIndent()
+        }
+            .andExpect {
+                status { isCreated() }
+                jsonPath("$.code") { value("OK") }
+                jsonPath("$.data.email") { value("bootstrap-admin@example.com") }
+                jsonPath("$.data.role") { value("ADMIN") }
+                jsonPath("$.data.status") { value("ACTIVE") }
+            }
+
+        mockMvc.post("/admin/login") {
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "email": "bootstrap-admin@example.com",
+                  "password": "admin-pass-1234"
+                }
+            """.trimIndent()
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.data.access_token") { exists() }
+            }
+    }
+
+    @Test
+    fun `admin account creation rejects wrong bootstrap token`() {
+        mockMvc.post("/admin/admins") {
+            header("X-Admin-Token", "wrong-token")
+            contentType = org.springframework.http.MediaType.APPLICATION_JSON
+            content = """
+                {
+                  "email": "should-not-exist@example.com",
+                  "password": "whatever-1234"
+                }
+            """.trimIndent()
+        }
+            .andExpect {
+                status { isUnauthorized() }
+                jsonPath("$.code") { value("UNAUTHORIZED") }
+                jsonPath("$.message") { value("관리자 토큰이 유효하지 않습니다.") }
+            }
     }
 
     @Test
@@ -34,7 +105,7 @@ class GaonClimateCoreApplicationTests(
         )
 
         mockMvc.post("/admin/devices") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
@@ -56,7 +127,7 @@ class GaonClimateCoreApplicationTests(
     @Test
     fun `error response is wrapped`() {
         mockMvc.post("/admin/devices") {
-            header("X-Admin-Token", "wrong-token")
+            header("Authorization", "Bearer wrong-token")
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
@@ -68,7 +139,7 @@ class GaonClimateCoreApplicationTests(
             .andExpect {
                 status { isUnauthorized() }
                 jsonPath("$.code") { value("UNAUTHORIZED") }
-                jsonPath("$.message") { value("관리자 토큰이 유효하지 않습니다.") }
+                jsonPath("$.message") { value("유효하지 않은 관리자 토큰입니다.") }
                 jsonPath("$.data") { doesNotExist() }
             }
     }
@@ -83,7 +154,7 @@ class GaonClimateCoreApplicationTests(
         )
 
         mockMvc.post("/admin/devices") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
@@ -98,7 +169,7 @@ class GaonClimateCoreApplicationTests(
             }
 
         mockMvc.get("/admin/users") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             param("email", "lookup@example.com")
         }
             .andExpect {
@@ -121,7 +192,7 @@ class GaonClimateCoreApplicationTests(
         )
 
         mockMvc.get("/admin/users") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             param("user_id", user.id.toString())
         }
             .andExpect {
@@ -135,7 +206,7 @@ class GaonClimateCoreApplicationTests(
     @Test
     fun `admin user lookup validates required identifier and email format`() {
         mockMvc.get("/admin/users") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             param("email", "invalid-email")
         }
             .andExpect {
@@ -154,7 +225,7 @@ class GaonClimateCoreApplicationTests(
         )
 
         mockMvc.post("/admin/devices") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
@@ -170,7 +241,7 @@ class GaonClimateCoreApplicationTests(
         val firstApiKey = userApiKeyRepository.findFirstByUserIdOrderByIdAsc(user.id!!)
 
         mockMvc.post("/admin/devices") {
-            header("X-Admin-Token", "test-admin-token")
+            header("Authorization", adminBearer())
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {

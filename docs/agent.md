@@ -107,6 +107,33 @@
 - 유효성체크가 정상일경우 유저정보와 디바이스 정보를 응답하고 api_key_hash 값도 응답 
 - Querydsl 도입하여 조회하도록함 (차후 확장 API 개발시 참고 샘플용)
 
+## 3.3. 관리자 계정 및 인증 관련 기능
+
+- 관리자 인증은 유저 인증과 완전히 분리함
+  - 유저용 JWT secret(`app.jwt.secret`) 과 관리자용 JWT secret(`app.admin-jwt.secret`) 을 반드시 다른 값으로 사용하여, 유저 액세스토큰이 관리자 토큰으로 혼용되는 것을 차단
+  - 관리자 액세스토큰 만료기간은 1시간 (유저보다 짧게)
+- 관리자 보호 API(3.1, 3.2)는 `Authorization` 헤더의 Bearer 토큰(관리자 JWT)으로 인증함
+  - 유저용 `@JwtAuth` 와 대칭되는 `@AdminAuth` 어노테이션이 붙은 메소드에 한해 인터셉터에서 관리자 JWT 를 검증
+  - 검증 시 `admin_users` 테이블의 상태(status)를 재확인하여, 계정 비활성화 시 토큰을 즉시 무효화할 수 있도록 함
+
+### 3.3.1. 관리자 계정 생성 API
+
+- 최초 관리자 계정을 만들기 위한 부트스트랩 API 임
+- `POST /admin/admins` 형태
+- `X-Admin-Token` 헤더로 전달한 고정 토큰(`app.admin-token`, 환경변수 `APP_ADMIN_TOKEN`)이 일치할 때만 동작
+  - 이 고정 토큰은 오직 관리자 계정 생성에만 사용하며, 다른 관리자 API 에서는 사용하지 않음
+- 관리자로부터 email, password, (optional) role 을 전달받음
+  - role 미지정 시 `ADMIN`, 허용값은 `ADMIN` / `SUPER_ADMIN`
+- email 은 UK 이므로 이미 존재하는 관리자라면 "이미 존재하는 관리자 계정입니다." 라는 메시지로 응답
+- 패스워드는 유저와 동일하게 bcrypt + pepper 롤링 방식으로 단방향 암호화하여 저장 (`admin_users` 테이블, password / password_key_index 컬럼)
+- 생성 성공 시 id, email, role, status, created_at 정보를 응답 (password 는 응답하지 않음)
+
+### 3.3.2. 관리자 로그인 API
+
+- `POST /admin/login` 형태
+- email, password 값을 전달받아 정상적인 활성 관리자라면 관리자 JWT 액세스토큰 발급
+- 액세스토큰의 sub 값은 `admin_users` 테이블의 id 값, role claim 에 관리자 role 을 포함
+
 # 4. 스케줄링 요구사항 
 
 - 매일 01:00 에 스케줄링 작업으로 7일이 초과된 device_measurements 데이터는 삭제 

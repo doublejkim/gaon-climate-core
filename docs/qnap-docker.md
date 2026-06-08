@@ -77,7 +77,9 @@ vi docker/.env
 ```env
 APP_PORT=8080
 SPRING_PROFILES_ACTIVE=prod
-APP_ADMIN_TOKEN=change-this-admin-token
+APP_JWT_SECRET=change-this-user-jwt-secret-at-least-32-chars
+APP_ADMIN_JWT_SECRET=change-this-admin-jwt-secret-at-least-32-chars
+APP_ADMIN_TOKEN=change-this-admin-bootstrap-token
 SPRING_DATASOURCE_URL=jdbc:mariadb://your-mariadb-host:3306/gaon_climate
 SPRING_DATASOURCE_USERNAME=gaon
 SPRING_DATASOURCE_PASSWORD=change-db-password
