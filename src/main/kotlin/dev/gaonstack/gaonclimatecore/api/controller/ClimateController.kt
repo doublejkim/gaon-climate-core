@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 class ClimateController(
     private val climateService: ClimateService,
 ) {
+    // 2.1.2. 온도 습도 저장: API key 인증 후 device_key 기준으로 온도/습도 측정값 저장
     @PostMapping("/{deviceKey}")
     @ResponseStatus(HttpStatus.CREATED)
     fun saveMeasurement(
@@ -30,6 +31,7 @@ class ClimateController(
         return climateService.saveMeasurement(apiKey, deviceKey, request)
     }
 
+    // 2.3.1. 현재 온도/습도 조회: API key 인증 후 device_key 기준 최신 측정값 1건 반환
     @GetMapping("/{deviceKey}/current")
     fun current(
         @PathVariable deviceKey: String,
@@ -37,6 +39,7 @@ class ClimateController(
     ): ClimateCurrentResponse =
         climateService.current(apiKey, deviceKey)
 
+    // 2.3.2. 1시간 기준 온도/습도 변동 조회: API key 인증 후 1시간을 10분 버킷으로 나눠 6개 구간 변동 데이터 반환
     @GetMapping("/{deviceKey}/last-hour")
     fun lastHour(
         @PathVariable deviceKey: String,

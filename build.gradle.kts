@@ -23,10 +23,20 @@ repositories {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+
+    // JWT
+    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+
+    // BCrypt
+    implementation("org.mindrot:jbcrypt:0.4")
+
+    // Discord
+    implementation("net.dv8tion:JDA:5.0.0")
+
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

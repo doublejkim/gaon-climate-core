@@ -9,8 +9,8 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "users")
-class User(
+@Table(name = "admin_users")
+class AdminUser(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
@@ -18,14 +18,14 @@ class User(
     @Column(nullable = false, unique = true)
     var email: String,
 
-    @Column(nullable = false, length = 100)
-    var name: String,
-
-    @Column(length = 60)
-    var password: String? = null,
+    @Column(nullable = false, length = 60)
+    var password: String,
 
     @Column(name = "password_key_index", nullable = false)
     var passwordKeyIndex: Int = 0,
+
+    @Column(nullable = false, length = 30)
+    var role: String = ROLE_ADMIN,
 
     @Column(nullable = false, length = 30)
     var status: String = STATUS_ACTIVE,
@@ -38,6 +38,7 @@ class User(
 ) {
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"
+        const val ROLE_ADMIN = "ADMIN"
+        const val ROLE_SUPER_ADMIN = "SUPER_ADMIN"
     }
 }
-

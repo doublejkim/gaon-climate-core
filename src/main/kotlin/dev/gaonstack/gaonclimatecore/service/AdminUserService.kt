@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException
 class AdminUserService(
     private val adminUserLookupRepository: AdminUserLookupRepository,
 ) {
+    // 3.2.1. 관리자용 유저 정보 조회: user_id 또는 email로 유저+디바이스+api_key 정보 일괄 반환
     @Transactional(readOnly = true)
     fun getUser(request: AdminUserLookupRequest): AdminUserLookupResponse {
         val user = adminUserLookupRepository.findUser(request.userId, request.email?.trim())

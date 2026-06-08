@@ -2,10 +2,23 @@ CREATE TABLE users (
                        id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 ID',
                        email VARCHAR(255) NOT NULL UNIQUE COMMENT '사용자 이메일',
                        name VARCHAR(100) NOT NULL COMMENT '사용자 이름',
+                       password VARCHAR(60) NULL COMMENT '비밀번호 (bcrypt)',
+                       password_key_index INT NOT NULL DEFAULT 0 COMMENT '비밀번호 pepper 키 인덱스',
                        status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT '사용자 상태',
                        created_at DATETIME(6) NOT NULL COMMENT '생성 일시',
                        updated_at DATETIME(6) NOT NULL COMMENT '수정 일시'
 ) COMMENT = '사용자';
+
+CREATE TABLE admin_users (
+                       id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '관리자 ID',
+                       email VARCHAR(255) NOT NULL UNIQUE COMMENT '관리자 이메일',
+                       password VARCHAR(60) NOT NULL COMMENT '비밀번호 (bcrypt)',
+                       password_key_index INT NOT NULL DEFAULT 0 COMMENT '비밀번호 pepper 키 인덱스',
+                       role VARCHAR(30) NOT NULL DEFAULT 'ADMIN' COMMENT '관리자 역할',
+                       status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE' COMMENT '관리자 상태',
+                       created_at DATETIME(6) NOT NULL COMMENT '생성 일시',
+                       updated_at DATETIME(6) NOT NULL COMMENT '수정 일시'
+) COMMENT = '관리자';
 
 CREATE TABLE user_api_keys (
                                id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 API 키 ID',
@@ -55,6 +68,20 @@ CREATE TABLE device_measurements (
 
 CREATE INDEX idx_device_measurements_device_01
     ON device_measurements (device_id, measured_at DESC);
+
+CREATE TABLE refresh_tokens (
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '리프레쉬 토큰 ID',
+                                user_id BIGINT NOT NULL COMMENT '사용자 ID',
+                                refresh_token VARCHAR(32) NOT NULL COMMENT '리프레쉬 토큰 (UUID 하이픈 제거)',
+                                expires_at DATETIME(6) NOT NULL COMMENT '만료 일시',
+                                created_at DATETIME(6) NOT NULL COMMENT '생성 일시',
+
+                                CONSTRAINT fk_refresh_tokens_user
+                                    FOREIGN KEY (user_id) REFERENCES users(id),
+
+                                CONSTRAINT uk_refresh_tokens_token
+                                    UNIQUE (refresh_token)
+) COMMENT = '리프레쉬 토큰';
 
 
 -- Test 용 초기 데이터

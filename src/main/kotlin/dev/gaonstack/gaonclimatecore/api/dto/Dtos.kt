@@ -14,6 +14,36 @@ data class RegisterDeviceRequest(
     val locationName: String? = null,
 )
 
+// 3.0.1. 관리자 로그인 요청
+data class AdminLoginRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 3.0.1. 관리자 로그인 응답 (관리자 JWT 액세스토큰)
+data class AdminLoginResponse(
+    @JsonProperty("access_token")
+    val accessToken: String,
+)
+
+// 3.3.1. 관리자 계정 생성 요청 (X-Admin-Token 부트스트랩 토큰으로 호출)
+data class AdminCreateRequest(
+    val email: String?,
+    val password: String?,
+    // 미지정 시 ADMIN
+    val role: String? = null,
+)
+
+// 3.3.1. 관리자 계정 생성 응답 (password 는 응답하지 않음)
+data class AdminCreateResponse(
+    val id: Long,
+    val email: String,
+    val role: String,
+    val status: String,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+)
+
 data class AdminCreateDeviceRequest(
     val email: String?,
     @JsonProperty("device_name")
@@ -131,4 +161,45 @@ data class ClimateHistoryPointResponse(
     @JsonProperty("temperature_c")
     val temperatureC: BigDecimal?,
     val humidity: BigDecimal?,
+)
+
+// 2.2.1. 회원가입 요청
+data class SignUpRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 2.2.2. 로그인 요청
+data class LoginRequest(
+    val email: String?,
+    val password: String?,
+)
+
+// 2.2.2. 로그인 응답 (액세스토큰 + 리프레쉬토큰)
+data class LoginResponse(
+    @JsonProperty("access_token")
+    val accessToken: String,
+    @JsonProperty("refresh_token")
+    val refreshToken: String,
+)
+
+// 2.2.3. 유저 디바이스 목록 응답 항목
+data class UserDeviceResponse(
+    val id: Long,
+    val name: String,
+    @JsonProperty("location_name")
+    val locationName: String?,
+    val status: String,
+    @JsonProperty("created_at")
+    val createdAt: LocalDateTime,
+)
+
+// 2.2.4. 유저의 특정 디바이스 최신 온도/습도 응답
+data class UserDeviceMeasurementResponse(
+    @JsonProperty("device_id")
+    val deviceId: Long,
+    val temperature: BigDecimal,
+    val humidity: BigDecimal?,
+    @JsonProperty("measured_at")
+    val measuredAt: LocalDateTime,
 )

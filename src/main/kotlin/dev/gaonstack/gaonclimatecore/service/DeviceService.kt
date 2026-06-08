@@ -23,6 +23,7 @@ class DeviceService(
     private val userApiKeyRepository: UserApiKeyRepository,
     private val apiKeyGenerator: ApiKeyGenerator,
 ) {
+    // 2.1.1. 디바이스 등록 및 api key 생성: device_key 중복 확인 후 디바이스 저장, 유저 단위 api key 없으면 신규 발급
     @Transactional
     fun registerFromDevice(userId: Long, request: RegisterDeviceRequest): RegisterDeviceResponse {
         val user = userRepository.findById(userId).orElseThrow {
@@ -53,6 +54,7 @@ class DeviceService(
         )
     }
 
+    // 3.1.1. 관리자용 디바이스 생성: email로 유저 조회 후 디바이스 등록, device_key 미입력 시 UUID로 자동 생성
     @Transactional
     fun createFromAdmin(request: AdminCreateDeviceRequest): RegisterDeviceResponse {
         val email = request.email.trimRequired("email")
@@ -86,6 +88,7 @@ class DeviceService(
         )
     }
 
+    // api key는 유저 단위로 1개만 유지 — 이미 존재하면 기존 키 반환, 없으면 신규 발급
     private fun getOrCreateApiKey(device: Device): UserApiKey {
         val userId = device.user.id ?: throw ResponseStatusException(
             HttpStatus.BAD_REQUEST,
