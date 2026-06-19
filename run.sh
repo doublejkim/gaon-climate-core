@@ -1,0 +1,1 @@
+CACHEBUST=$(date +%s) docker compose --env-file docker/.env -f docker/compose.yaml up -d --build

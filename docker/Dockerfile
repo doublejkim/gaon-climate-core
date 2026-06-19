@@ -2,6 +2,7 @@ FROM eclipse-temurin:21-jdk AS build
 
 ARG REPOSITORY_URL=https://github.com/doublejkim/gaon-climate-core.git
 ARG GIT_REF=main
+ARG CACHEBUST=1
 
 WORKDIR /workspace
 
@@ -9,7 +10,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-RUN git init source && \
+RUN echo "cachebust: ${CACHEBUST}" && \
+    git init source && \
     cd source && \
     git remote add origin "${REPOSITORY_URL}" && \
     git fetch --depth 1 origin "${GIT_REF}" && \
