@@ -10,8 +10,8 @@ services:
         GIT_REF: ${GIT_REF:-main}
     container_name: gaon-climate-core
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:8080"
+    networks:
+      - proxy-net
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
@@ -24,6 +24,15 @@ services:
       TZ: ${TZ:-Asia/Seoul}
     volumes:
       - app_logs:/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.climate-api.rule=Host(`api.climate.gaonstack.dev`)"
+      - "traefik.http.routers.climate-api.entrypoints=web"
+      - "traefik.http.services.climate-api.loadbalancer.server.port=8080"
 
 volumes:
   app_logs:
+
+networks:
+  proxy-net:
+    external: true
