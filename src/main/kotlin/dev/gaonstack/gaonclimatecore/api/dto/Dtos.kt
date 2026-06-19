@@ -6,6 +6,12 @@ import org.springframework.web.bind.annotation.BindParam
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
+// 통신 테스트용 ping 응답 (서버 상태와 응답 시각 반환)
+data class PingResponse(
+    val message: String,
+    val timestamp: LocalDateTime,
+)
+
 data class RegisterDeviceRequest(
     @JsonProperty("device_key")
     val deviceKey: String?,
