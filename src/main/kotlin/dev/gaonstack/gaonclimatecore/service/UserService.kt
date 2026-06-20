@@ -3,6 +3,7 @@ package dev.gaonstack.gaonclimatecore.service
 import dev.gaonstack.gaonclimatecore.api.dto.LoginRequest
 import dev.gaonstack.gaonclimatecore.api.dto.LoginResponse
 import dev.gaonstack.gaonclimatecore.api.dto.SignUpRequest
+import dev.gaonstack.gaonclimatecore.api.dto.TokenReissueRequest
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceMeasurementResponse
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceResponse
 import dev.gaonstack.gaonclimatecore.auth.JwtProvider
@@ -93,6 +94,36 @@ class UserService(
         val refreshToken = issueRefreshToken(user)
 
         return LoginResponse(accessToken = accessToken, refreshToken = refreshToken)
+    }
+
+    // 2.2.5. 토큰 재발급: 리프레쉬 토큰 검증 후 액세스토큰 + 리프레쉬토큰 재발급(회전)
+    @Transactional
+    fun reissue(request: TokenReissueRequest): LoginResponse {
+        val token = request.refreshToken?.trim()?.takeIf { it.isNotBlank() }
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "refresh_token 값이 필요합니다.")
+
+        val stored = refreshTokenRepository.findByRefreshToken(token)
+            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레쉬 토큰입니다.")
+
+        // 만료 검증: 만료된 토큰은 정리 후 거절
+        if (stored.expiresAt.isBefore(LocalDateTime.now())) {
+            refreshTokenRepository.delete(stored)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.")
+        }
+
+        val user = stored.user
+        if (user.status != User.STATUS_ACTIVE) {
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "비활성 계정입니다.")
+        }
+        val userId = user.id
+            ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보가 올바르지 않습니다.")
+
+        // 회전: 사용된 리프레쉬 토큰은 폐기하고 새 토큰을 발급해 재사용을 차단한다.
+        refreshTokenRepository.delete(stored)
+        val accessToken = jwtProvider.createAccessToken(userId)
+        val newRefreshToken = issueRefreshToken(user)
+
+        return LoginResponse(accessToken = accessToken, refreshToken = newRefreshToken)
     }
 
     // 2.2.3. 유저 디바이스 목록 조회: JWT 인증된 유저 소유의 devices 목록 반환
