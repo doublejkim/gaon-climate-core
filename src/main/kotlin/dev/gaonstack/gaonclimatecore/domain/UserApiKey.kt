@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 @Table(
     name = "user_api_keys",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_user_api_keys_user", columnNames = ["user_id"]),
+        UniqueConstraint(name = "uk_user_api_keys_device", columnNames = ["device_id"]),
     ],
 )
 class UserApiKey(
@@ -24,9 +24,15 @@ class UserApiKey(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
 
+    // api key 의 소유자(유저). device.user 와 동일하지만 조회 편의를 위해 비정규화로 보관
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id", nullable = false)
     var user: User,
+
+    // api key 가 인증하는 디바이스. 디바이스당 1개(unique)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "device_id", nullable = false, unique = true)
+    var device: Device,
 
     @Column(name = "api_key_hash", nullable = false, unique = true)
     var apiKeyHash: String,

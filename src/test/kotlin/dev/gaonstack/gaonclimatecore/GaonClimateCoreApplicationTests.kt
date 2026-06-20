@@ -4,6 +4,7 @@ import dev.gaonstack.gaonclimatecore.auth.AdminJwtProvider
 import dev.gaonstack.gaonclimatecore.domain.AdminUser
 import dev.gaonstack.gaonclimatecore.domain.User
 import dev.gaonstack.gaonclimatecore.repository.AdminUserRepository
+import dev.gaonstack.gaonclimatecore.repository.DeviceRepository
 import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
 import dev.gaonstack.gaonclimatecore.repository.UserRepository
 import org.junit.jupiter.api.Test
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -21,6 +23,7 @@ class GaonClimateCoreApplicationTests(
     @Autowired private val mockMvc: MockMvc,
     @Autowired private val userRepository: UserRepository,
     @Autowired private val userApiKeyRepository: UserApiKeyRepository,
+    @Autowired private val deviceRepository: DeviceRepository,
     @Autowired private val adminUserRepository: AdminUserRepository,
     @Autowired private val adminJwtProvider: AdminJwtProvider,
 ) {
@@ -178,7 +181,8 @@ class GaonClimateCoreApplicationTests(
                 jsonPath("$.data.user.email") { value("lookup@example.com") }
                 jsonPath("$.data.devices[0].device_key") { value("lookup-device") }
                 jsonPath("$.data.devices[0].name") { value("LOOKUP_DEVICE") }
-                jsonPath("$.data.api_key.api_key_hash") { exists() }
+                jsonPath("$.data.api_keys[0].api_key_hash") { exists() }
+                jsonPath("$.data.api_keys[0].device_id") { exists() }
             }
     }
 
@@ -199,7 +203,7 @@ class GaonClimateCoreApplicationTests(
                 status { isOk() }
                 jsonPath("$.data.user.email") { value("no-device@example.com") }
                 jsonPath("$.data.devices") { isEmpty() }
-                jsonPath("$.data.api_key") { doesNotExist() }
+                jsonPath("$.data.api_keys") { isEmpty() }
             }
     }
 
@@ -216,11 +220,11 @@ class GaonClimateCoreApplicationTests(
     }
 
     @Test
-    fun `admin device creation reuses existing user api key`() {
+    fun `admin device creation issues a separate api key per device`() {
         val user = userRepository.save(
             User(
-                email = "reuse-key@example.com",
-                name = "키 재사용 사용자",
+                email = "per-device-key@example.com",
+                name = "디바이스별 키 사용자",
             )
         )
 
@@ -229,32 +233,39 @@ class GaonClimateCoreApplicationTests(
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
-                  "email": "reuse-key@example.com",
-                  "device_key": "reuse-device-1"
+                  "email": "per-device-key@example.com",
+                  "device_key": "per-device-1"
                 }
             """.trimIndent()
         }
             .andExpect {
                 status { isCreated() }
+                // 신규 디바이스마다 raw api key 가 1회성으로 반환된다
+                jsonPath("$.data.api_key") { exists() }
             }
-
-        val firstApiKey = userApiKeyRepository.findFirstByUserIdOrderByIdAsc(user.id!!)
 
         mockMvc.post("/admin/devices") {
             header("Authorization", adminBearer())
             contentType = org.springframework.http.MediaType.APPLICATION_JSON
             content = """
                 {
-                  "email": "reuse-key@example.com",
-                  "device_key": "reuse-device-2"
+                  "email": "per-device-key@example.com",
+                  "device_key": "per-device-2"
                 }
             """.trimIndent()
         }
             .andExpect {
                 status { isCreated() }
-                jsonPath("$.data.api_key_hash") { value(firstApiKey!!.apiKeyHash) }
+                jsonPath("$.data.api_key") { exists() }
             }
 
-        assertEquals(1L, userApiKeyRepository.countByUserId(user.id!!))
+        // 디바이스당 키 1개 → 유저는 디바이스 수만큼(2개) 키를 가진다
+        assertEquals(2L, userApiKeyRepository.countByUserId(user.id!!))
+
+        val device1 = deviceRepository.findByDeviceKey("per-device-1")!!
+        val device2 = deviceRepository.findByDeviceKey("per-device-2")!!
+        val key1 = userApiKeyRepository.findByDeviceId(device1.id!!)!!
+        val key2 = userApiKeyRepository.findByDeviceId(device2.id!!)!!
+        assertNotEquals(key1.apiKeyHash, key2.apiKeyHash)
     }
 }

@@ -53,7 +53,7 @@ class AdminController(
         return adminAuthService.login(request)
     }
 
-    // 3.1.1. 관리자용 디바이스 및 api key 생성: 관리자 JWT 검증 후 email+name 기반 디바이스 등록, api_key_hash 반환
+    // 3.1.1. 관리자용 디바이스 및 api key 생성: 관리자 JWT 검증 후 email+name 기반 디바이스 등록, 신규 발급 시 raw api_key 반환(1회성)
     @PostMapping("/devices")
     @AdminAuth
     @ResponseStatus(HttpStatus.CREATED)

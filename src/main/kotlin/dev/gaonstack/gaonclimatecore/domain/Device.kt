@@ -31,6 +31,10 @@ class Device(
     @Column(name = "location_name", length = 100)
     var locationName: String? = null,
 
+    // 디바이스 타입 (TEMP_HUMIDITY: 온습도 센서, MIC: 마이크)
+    @Column(nullable = false, length = 30)
+    var type: String = TYPE_TEMP_HUMIDITY,
+
     @Column(nullable = false, length = 30)
     var status: String = STATUS_ACTIVE,
 
@@ -45,6 +49,13 @@ class Device(
 ) {
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"
+
+        // 온습도 센서
+        const val TYPE_TEMP_HUMIDITY = "TEMP_HUMIDITY"
+        // 마이크
+        const val TYPE_MIC = "MIC"
+
+        val TYPES = setOf(TYPE_TEMP_HUMIDITY, TYPE_MIC)
     }
 }
 

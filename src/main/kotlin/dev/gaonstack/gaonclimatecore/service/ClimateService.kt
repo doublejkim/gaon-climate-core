@@ -26,18 +26,14 @@ class ClimateService(
     @Value("\${app.climate.history.bucket-seconds:600}")
     private val historyBucketSeconds: Long,
 ) {
-    // 2.1.2. 온도 습도 저장: API key와 device_key 소유자 일치 확인 후 측정값 저장, device last_seen_at 갱신
+    // 2.1.2. 온도 습도 저장: API key가 가리키는 디바이스와 path의 device_key 일치 확인 후 측정값 저장, device last_seen_at 갱신
     @Transactional
     fun saveMeasurement(
         authenticatedApiKey: AuthenticatedApiKey,
         deviceKey: String,
         request: ClimateMeasurementRequest,
     ): ClimateMeasurementResponse {
-        val device = activeDevice(deviceKey)
-
-        if (device.user.id != authenticatedApiKey.userId) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "API key와 device_key의 사용자가 일치하지 않습니다.")
-        }
+        val device = activeDevice(deviceKey, authenticatedApiKey)
 
         val now = LocalDateTime.now()
         val measurement = measurementRepository.save(
@@ -140,8 +136,9 @@ class ClimateService(
 
     private fun activeDevice(deviceKey: String, authenticatedApiKey: AuthenticatedApiKey): Device {
         val device = activeDevice(deviceKey)
-        if (device.user.id != authenticatedApiKey.userId) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "API key와 device_key의 사용자가 일치하지 않습니다.")
+        // 디바이스당 키 모델: 키가 가리키는 디바이스와 요청 대상 device_key 가 동일해야 한다
+        if (device.id != authenticatedApiKey.deviceId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "API key와 device_key가 일치하지 않습니다.")
         }
 
         return device

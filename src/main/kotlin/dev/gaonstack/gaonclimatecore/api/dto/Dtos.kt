@@ -18,6 +18,8 @@ data class RegisterDeviceRequest(
     val name: String? = null,
     @JsonProperty("location_name")
     val locationName: String? = null,
+    // 디바이스 타입(TEMP_HUMIDITY, MIC). 미입력 시 TEMP_HUMIDITY
+    val type: String? = null,
 )
 
 // 3.0.1. 관리자 로그인 요청
@@ -58,6 +60,8 @@ data class AdminCreateDeviceRequest(
     val deviceKey: String? = null,
     @JsonProperty("location_name")
     val locationName: String? = null,
+    // 디바이스 타입(TEMP_HUMIDITY, MIC). 미입력 시 TEMP_HUMIDITY
+    val type: String? = null,
 )
 
 @ValidAdminUserLookup
@@ -70,8 +74,9 @@ data class AdminUserLookupRequest(
 data class AdminUserLookupResponse(
     val user: UserResponse,
     val devices: List<DeviceResponse>,
-    @JsonProperty("api_key")
-    val apiKey: ApiKeyResponse?,
+    // 디바이스당 api key 1개이므로 유저는 디바이스 수만큼 키를 가질 수 있다
+    @JsonProperty("api_keys")
+    val apiKeys: List<ApiKeyResponse>,
 )
 
 data class UserResponse(
@@ -87,6 +92,8 @@ data class UserResponse(
 
 data class ApiKeyResponse(
     val id: Long,
+    @JsonProperty("device_id")
+    val deviceId: Long,
     @JsonProperty("api_key_hash")
     val apiKeyHash: String,
     @JsonProperty("key_prefix")
@@ -105,8 +112,29 @@ data class ApiKeyResponse(
 
 data class RegisterDeviceResponse(
     val devices: List<DeviceResponse>,
-    @JsonProperty("api_key_hash")
-    val apiKeyHash: String,
+    // 신규 발급 시에만 채워지는 raw api key(1회성). 기존 키 재사용 시 null —
+    // 이 경우 이미 발급받아 보관 중인 키를 그대로 사용한다.
+    @JsonProperty("api_key")
+    val apiKey: String?,
+)
+
+// 2.1.3. 디바이스 클레임 코드 발급 응답 (유저가 웹에서 발급 → 디바이스에 입력)
+data class ClaimCodeResponse(
+    @JsonProperty("claim_code")
+    val claimCode: String,
+    @JsonProperty("expires_at")
+    val expiresAt: LocalDateTime,
+)
+
+// 2.1.4. 디바이스 클레임 요청 (디바이스가 클레임 코드로 자가 등록)
+data class DeviceClaimRequest(
+    @JsonProperty("claim_code")
+    val claimCode: String?,
+    val name: String? = null,
+    @JsonProperty("location_name")
+    val locationName: String? = null,
+    // 디바이스 타입(TEMP_HUMIDITY, MIC). 미입력 시 TEMP_HUMIDITY
+    val type: String? = null,
 )
 
 
@@ -119,6 +147,7 @@ data class DeviceResponse(
     val name: String,
     @JsonProperty("location_name")
     val locationName: String?,
+    val type: String,
     val status: String,
     @JsonProperty("last_seen_at")
     val lastSeenAt: LocalDateTime?,
@@ -201,6 +230,7 @@ data class UserDeviceResponse(
     val name: String,
     @JsonProperty("location_name")
     val locationName: String?,
+    val type: String,
     val status: String,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime,

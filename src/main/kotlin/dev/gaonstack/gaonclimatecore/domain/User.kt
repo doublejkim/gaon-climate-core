@@ -28,7 +28,7 @@ class User(
     var passwordKeyIndex: Int = 0,
 
     @Column(nullable = false, length = 30)
-    var status: String = STATUS_ACTIVE,
+    var status: String = STATUS_PENDING,
 
     @Column(name = "created_at", nullable = false)
     var createdAt: LocalDateTime = LocalDateTime.now(),
@@ -37,7 +37,12 @@ class User(
     var updatedAt: LocalDateTime = LocalDateTime.now(),
 ) {
     companion object {
+        // 가입 직후 기본 상태. 관리자 승인 등으로 ACTIVE 전환 전까지 로그인 불가
+        const val STATUS_PENDING = "PENDING"
+        // 정상 활성 상태. 로그인 가능
         const val STATUS_ACTIVE = "ACTIVE"
+        // 비활성 상태. 로그인 불가
+        const val STATUS_INACTIVE = "INACTIVE"
     }
 }
 

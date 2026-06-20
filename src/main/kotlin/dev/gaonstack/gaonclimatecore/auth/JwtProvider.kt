@@ -6,10 +6,10 @@ import com.nimbusds.jose.crypto.MACSigner
 import com.nimbusds.jose.crypto.MACVerifier
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import dev.gaonstack.gaonclimatecore.api.response.BusinessException
+import dev.gaonstack.gaonclimatecore.api.response.ErrorCode
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
-import org.springframework.web.server.ResponseStatusException
 import java.util.Date
 
 @Component
@@ -40,27 +40,27 @@ class JwtProvider(
         return try {
             val jwt = SignedJWT.parse(token)
             if (!jwt.verify(MACVerifier(secretBytes))) {
-                throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 액세스토큰입니다.")
+                throw BusinessException(ErrorCode.INVALID_TOKEN)
             }
             val claims = jwt.jwtClaimsSet
             if (claims.expirationTime?.before(Date()) == true) {
-                throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "만료된 액세스토큰입니다.")
+                throw BusinessException(ErrorCode.TOKEN_EXPIRED)
             }
             claims.subject.toLong()
-        } catch (e: ResponseStatusException) {
+        } catch (e: BusinessException) {
             throw e
         } catch (e: Exception) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 액세스토큰입니다.")
+            throw BusinessException(ErrorCode.INVALID_TOKEN)
         }
     }
 
     private fun extractBearerToken(authorization: String?): String {
         val value = authorization?.trim()
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization 헤더가 필요합니다.")
+            ?: throw BusinessException(ErrorCode.INVALID_TOKEN, "Authorization 헤더가 필요합니다.")
         if (!value.startsWith("Bearer ", ignoreCase = true)) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bearer 토큰이 필요합니다.")
+            throw BusinessException(ErrorCode.INVALID_TOKEN, "Bearer 토큰이 필요합니다.")
         }
         return value.substringAfter(' ').trim().takeIf { it.isNotBlank() }
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bearer 토큰이 비어 있습니다.")
+            ?: throw BusinessException(ErrorCode.INVALID_TOKEN, "Bearer 토큰이 비어 있습니다.")
     }
 }

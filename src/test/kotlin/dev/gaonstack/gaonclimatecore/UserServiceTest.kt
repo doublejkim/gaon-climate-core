@@ -2,6 +2,8 @@ package dev.gaonstack.gaonclimatecore
 
 import dev.gaonstack.gaonclimatecore.api.dto.LoginRequest
 import dev.gaonstack.gaonclimatecore.api.dto.SignUpRequest
+import dev.gaonstack.gaonclimatecore.api.response.BusinessException
+import dev.gaonstack.gaonclimatecore.api.response.ErrorCode
 import dev.gaonstack.gaonclimatecore.domain.Device
 import dev.gaonstack.gaonclimatecore.domain.DeviceMeasurement
 import dev.gaonstack.gaonclimatecore.domain.User
@@ -39,9 +41,12 @@ class UserServiceTest(
     private fun savedUser(email: String = uniqueEmail()): User =
         userRepository.save(User(email = email, name = "테스트"))
 
+    // 가입 기본 상태는 PENDING 이므로, 로그인 테스트를 위해 ACTIVE 로 전환해 저장
     private fun savedUserWithPassword(email: String = uniqueEmail(), rawPassword: String = "pass1234"): User {
         userService.signUp(SignUpRequest(email = email, password = rawPassword))
-        return userRepository.findByEmail(email)!!
+        val user = userRepository.findByEmail(email)!!
+        user.status = User.STATUS_ACTIVE
+        return userRepository.save(user)
     }
 
     private fun savedDevice(user: User, locationName: String? = null): Device =
@@ -139,22 +144,22 @@ class UserServiceTest(
     }
 
     @Test
-    fun `login - 틀린 비밀번호면 UNAUTHORIZED`() {
+    fun `login - 틀린 비밀번호면 INVALID_CREDENTIALS`() {
         val email = uniqueEmail()
         savedUserWithPassword(email, "correctPass")
 
-        val ex = assertFailsWith<ResponseStatusException> {
+        val ex = assertFailsWith<BusinessException> {
             userService.login(LoginRequest(email = email, password = "wrongPass"))
         }
-        assertEquals(HttpStatus.UNAUTHORIZED, ex.statusCode)
+        assertEquals(ErrorCode.INVALID_CREDENTIALS, ex.errorCode)
     }
 
     @Test
-    fun `login - 존재하지 않는 이메일이면 UNAUTHORIZED`() {
-        val ex = assertFailsWith<ResponseStatusException> {
+    fun `login - 존재하지 않는 이메일이면 INVALID_CREDENTIALS`() {
+        val ex = assertFailsWith<BusinessException> {
             userService.login(LoginRequest(email = "nobody@svc.test", password = "pass"))
         }
-        assertEquals(HttpStatus.UNAUTHORIZED, ex.statusCode)
+        assertEquals(ErrorCode.INVALID_CREDENTIALS, ex.errorCode)
     }
 
     @Test

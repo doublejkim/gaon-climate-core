@@ -1,6 +1,7 @@
 package dev.gaonstack.gaonclimatecore.service
 
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedApiKey
+import dev.gaonstack.gaonclimatecore.domain.Device
 import dev.gaonstack.gaonclimatecore.domain.User
 import dev.gaonstack.gaonclimatecore.domain.UserApiKey
 import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
@@ -15,6 +16,7 @@ import java.time.LocalDateTime
 class AuthService(
     private val userRepository: UserRepository,
     private val userApiKeyRepository: UserApiKeyRepository,
+    private val apiKeyGenerator: ApiKeyGenerator,
 ) {
     // 2.1.1. Bearer 토큰(user id 또는 email)으로 활성 사용자 조회 — 디바이스 등록 시 유저 식별에 사용
     @Transactional(readOnly = true)
@@ -34,11 +36,15 @@ class AuthService(
     @Transactional
     fun requireApiKey(authorization: String?): AuthenticatedApiKey {
         val token = bearerToken(authorization)
-        val apiKey = userApiKeyRepository.findByApiKeyHash(token)
+        // 디바이스가 보낸 raw 키를 해시해 저장된 해시와 대조 (DB에는 해시만 보관)
+        val apiKey = userApiKeyRepository.findByApiKeyHash(apiKeyGenerator.hash(token))
             ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 API key 입니다.")
 
         val now = LocalDateTime.now()
-        if (apiKey.status != UserApiKey.STATUS_ACTIVE || apiKey.user.status != User.STATUS_ACTIVE) {
+        if (apiKey.status != UserApiKey.STATUS_ACTIVE ||
+            apiKey.user.status != User.STATUS_ACTIVE ||
+            apiKey.device.status != Device.STATUS_ACTIVE
+        ) {
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "비활성 API key 입니다.")
         }
         if (apiKey.expiresAt != null && apiKey.expiresAt!!.isBefore(now)) {
@@ -53,6 +59,10 @@ class AuthService(
             userId = apiKey.user.id ?: throw ResponseStatusException(
                 HttpStatus.UNAUTHORIZED,
                 "API key 사용자 정보가 올바르지 않습니다.",
+            ),
+            deviceId = apiKey.device.id ?: throw ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "API key 디바이스 정보가 올바르지 않습니다.",
             ),
             apiKeyHash = apiKey.apiKeyHash,
         )

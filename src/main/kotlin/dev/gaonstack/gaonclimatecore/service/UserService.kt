@@ -4,6 +4,8 @@ import dev.gaonstack.gaonclimatecore.api.dto.LoginRequest
 import dev.gaonstack.gaonclimatecore.api.dto.LoginResponse
 import dev.gaonstack.gaonclimatecore.api.dto.SignUpRequest
 import dev.gaonstack.gaonclimatecore.api.dto.TokenReissueRequest
+import dev.gaonstack.gaonclimatecore.api.response.BusinessException
+import dev.gaonstack.gaonclimatecore.api.response.ErrorCode
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceMeasurementResponse
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceResponse
 import dev.gaonstack.gaonclimatecore.auth.JwtProvider
@@ -58,6 +60,8 @@ class UserService(
                 name = email.substringBefore("@"),
                 password = passwordHash,
                 passwordKeyIndex = pepperIndex,
+                // 가입 직후에는 PENDING 으로 등록. ACTIVE 전환은 추후 관리자 기능에서 처리
+                status = User.STATUS_PENDING,
                 createdAt = now,
                 updatedAt = now,
             )
@@ -73,20 +77,23 @@ class UserService(
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "password 값이 필요합니다.")
 
         val user = userRepository.findByEmail(email)
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
-
-        if (user.status != User.STATUS_ACTIVE) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "비활성 계정입니다.")
-        }
+            ?: throw BusinessException(ErrorCode.INVALID_CREDENTIALS)
 
         val storedHash = user.password
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
+            ?: throw BusinessException(ErrorCode.INVALID_CREDENTIALS)
 
         val pepper = peppers.getOrNull(user.passwordKeyIndex)
             ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "인증 설정 오류입니다.")
 
         if (!BCrypt.checkpw(password + pepper, storedHash)) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
+            throw BusinessException(ErrorCode.INVALID_CREDENTIALS)
+        }
+
+        // 자격 증명 확인 후 계정 상태 검증: 비밀번호를 모르는 사용자에게 계정 상태가 노출되지 않도록 비밀번호 검증을 먼저 수행
+        when (user.status) {
+            User.STATUS_ACTIVE -> Unit
+            User.STATUS_PENDING -> throw BusinessException(ErrorCode.ACCOUNT_PENDING)
+            else -> throw BusinessException(ErrorCode.ACCOUNT_INACTIVE)
         }
 
         val userId = user.id ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보가 올바르지 않습니다.")
@@ -103,17 +110,19 @@ class UserService(
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "refresh_token 값이 필요합니다.")
 
         val stored = refreshTokenRepository.findByRefreshToken(token)
-            ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레쉬 토큰입니다.")
+            ?: throw BusinessException(ErrorCode.INVALID_REFRESH_TOKEN)
 
         // 만료 검증: 만료된 토큰은 정리 후 거절
         if (stored.expiresAt.isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(stored)
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.")
+            throw BusinessException(ErrorCode.REFRESH_TOKEN_EXPIRED)
         }
 
         val user = stored.user
-        if (user.status != User.STATUS_ACTIVE) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "비활성 계정입니다.")
+        when (user.status) {
+            User.STATUS_ACTIVE -> Unit
+            User.STATUS_PENDING -> throw BusinessException(ErrorCode.ACCOUNT_PENDING)
+            else -> throw BusinessException(ErrorCode.ACCOUNT_INACTIVE)
         }
         val userId = user.id
             ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 정보가 올바르지 않습니다.")
@@ -134,6 +143,7 @@ class UserService(
                 id = device.id ?: 0L,
                 name = device.name,
                 locationName = device.locationName,
+                type = device.type,
                 status = device.status,
                 createdAt = device.createdAt,
             )

@@ -6,6 +6,7 @@ data class AuthenticatedUser(
 
 data class AuthenticatedApiKey(
     val userId: Long,
+    val deviceId: Long,
     val apiKeyHash: String,
 )
 

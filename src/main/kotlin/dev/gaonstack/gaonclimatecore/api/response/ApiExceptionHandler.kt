@@ -13,6 +13,14 @@ import jakarta.validation.ConstraintViolationException
 @RestControllerAdvice
 class ApiExceptionHandler {
     private val log = LoggerFactory.getLogger(ApiExceptionHandler::class.java)
+
+    // 비즈니스 예외: code 에 ErrorCode 이름(비즈니스 상황 코드)을 그대로 내려준다.
+    @ExceptionHandler(BusinessException::class)
+    fun handleBusinessException(exception: BusinessException): ResponseEntity<ApiResponse<Nothing>> =
+        ResponseEntity
+            .status(exception.errorCode.status)
+            .body(ApiResponse.error(exception.errorCode.name, exception.message))
+
     @ExceptionHandler(ResponseStatusException::class)
     fun handleResponseStatusException(exception: ResponseStatusException): ResponseEntity<ApiResponse<Nothing>> {
         val statusCode = exception.statusCode

@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface UserApiKeyRepository : JpaRepository<UserApiKey, Long> {
     fun findByApiKeyHash(apiKeyHash: String): UserApiKey?
-    fun findFirstByUserIdOrderByIdAsc(userId: Long): UserApiKey?
+    fun findByDeviceId(deviceId: Long): UserApiKey?
     fun countByUserId(userId: Long): Long
 }

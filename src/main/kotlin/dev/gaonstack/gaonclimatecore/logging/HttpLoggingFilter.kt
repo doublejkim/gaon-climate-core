@@ -135,7 +135,7 @@ class HttpLoggingFilter : OncePerRequestFilter() {
             equals("X-Admin-Token", ignoreCase = true)
 
     private fun String.maskSensitiveBodyFields(): String =
-        replace(Regex(""""(api_key_hash|authorization|token|password)"\s*:\s*"[^"]*"""", RegexOption.IGNORE_CASE)) {
+        replace(Regex(""""(api_key|api_key_hash|claim_code|authorization|token|password)"\s*:\s*"[^"]*"""", RegexOption.IGNORE_CASE)) {
             """"${it.groupValues[1]}":"***""""
         }
 

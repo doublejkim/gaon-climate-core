@@ -1,14 +1,21 @@
 package dev.gaonstack.gaonclimatecore.service
 
 import dev.gaonstack.gaonclimatecore.api.dto.AdminCreateDeviceRequest
+import dev.gaonstack.gaonclimatecore.api.dto.ClaimCodeResponse
+import dev.gaonstack.gaonclimatecore.api.dto.DeviceClaimRequest
 import dev.gaonstack.gaonclimatecore.api.dto.DeviceResponse
 import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceRequest
 import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
+import dev.gaonstack.gaonclimatecore.api.response.BusinessException
+import dev.gaonstack.gaonclimatecore.api.response.ErrorCode
 import dev.gaonstack.gaonclimatecore.domain.Device
+import dev.gaonstack.gaonclimatecore.domain.DeviceClaimCode
 import dev.gaonstack.gaonclimatecore.domain.UserApiKey
+import dev.gaonstack.gaonclimatecore.repository.DeviceClaimCodeRepository
 import dev.gaonstack.gaonclimatecore.repository.DeviceRepository
 import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
 import dev.gaonstack.gaonclimatecore.repository.UserRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +29,10 @@ class DeviceService(
     private val userRepository: UserRepository,
     private val userApiKeyRepository: UserApiKeyRepository,
     private val apiKeyGenerator: ApiKeyGenerator,
+    private val claimCodeRepository: DeviceClaimCodeRepository,
+    private val claimCodeGenerator: ClaimCodeGenerator,
+    @Value("\${app.device.claim-code.ttl-seconds:600}")
+    private val claimCodeTtlSeconds: Long,
 ) {
     // 2.1.1. 디바이스 등록 및 api key 생성: device_key 중복 확인 후 디바이스 저장, 유저 단위 api key 없으면 신규 발급
     @Transactional
@@ -42,15 +53,16 @@ class DeviceService(
                 deviceKey = deviceKey,
                 name = request.name?.trim()?.takeIf { it.isNotBlank() } ?: deviceKey,
                 locationName = request.locationName?.trim()?.takeIf { it.isNotBlank() },
+                type = resolveDeviceType(request.type),
                 createdAt = now,
                 updatedAt = now,
             )
         )
-        val apiKey = getOrCreateApiKey(device)
+        val issued = getOrCreateApiKey(device)
 
         return RegisterDeviceResponse(
             devices = listOf(device.toResponse()),
-            apiKeyHash = apiKey.apiKeyHash,
+            apiKey = issued.rawKey,
         )
     }
 
@@ -76,31 +88,111 @@ class DeviceService(
                 deviceKey = deviceKey,
                 name = request.deviceName?.trim()?.takeIf { it.isNotBlank() } ?: "TEST_DEVICE",
                 locationName = request.locationName?.trim()?.takeIf { it.isNotBlank() },
+                type = resolveDeviceType(request.type),
                 createdAt = now,
                 updatedAt = now,
             )
         )
-        val apiKey = getOrCreateApiKey(device)
+        val issued = getOrCreateApiKey(device)
 
         return RegisterDeviceResponse(
             devices = listOf(device.toResponse()),
-            apiKeyHash = apiKey.apiKeyHash,
+            apiKey = issued.rawKey,
         )
     }
 
-    // api key는 유저 단위로 1개만 유지 — 이미 존재하면 기존 키 반환, 없으면 신규 발급
-    private fun getOrCreateApiKey(device: Device): UserApiKey {
-        val userId = device.user.id ?: throw ResponseStatusException(
-            HttpStatus.BAD_REQUEST,
-            "사용자 정보가 올바르지 않습니다.",
+    // 2.1.3. 디바이스 클레임 코드 발급: JWT 인증된 유저에게 일회용 코드를 발급한다(디바이스 온보딩용)
+    @Transactional
+    fun issueClaimCode(userId: Long): ClaimCodeResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 사용자입니다.")
+        }
+        val now = LocalDateTime.now()
+        val saved = claimCodeRepository.save(
+            DeviceClaimCode(
+                user = user,
+                code = generateUniqueClaimCode(),
+                expiresAt = now.plusSeconds(claimCodeTtlSeconds),
+                createdAt = now,
+            )
         )
-        userApiKeyRepository.findFirstByUserIdOrderByIdAsc(userId)?.let { return it }
+        return ClaimCodeResponse(claimCode = saved.code, expiresAt = saved.expiresAt)
+    }
+
+    // 2.1.4. 디바이스 클레임: 디바이스가 클레임 코드로 자가 등록한다.
+    // 코드 검증 → device_key 자동 생성 → 디바이스 저장 → api key 발급(유저 단위) → 코드 1회용 소멸
+    @Transactional
+    fun claimDevice(request: DeviceClaimRequest): RegisterDeviceResponse {
+        val code = request.claimCode.trimRequired("claim_code").uppercase()
+        val claim = claimCodeRepository.findByCode(code)
+            ?: throw BusinessException(ErrorCode.INVALID_CLAIM_CODE)
+
+        val now = LocalDateTime.now()
+        if (claim.isUsed()) {
+            throw BusinessException(ErrorCode.CLAIM_CODE_ALREADY_USED)
+        }
+        if (claim.isExpired(now)) {
+            throw BusinessException(ErrorCode.CLAIM_CODE_EXPIRED)
+        }
+
+        // 코드 1회용 처리(소멸)
+        claim.usedAt = now
+        claimCodeRepository.save(claim)
+
+        val deviceKey = generateUniqueDeviceKey()
+        val device = deviceRepository.save(
+            Device(
+                user = claim.user,
+                deviceKey = deviceKey,
+                name = request.name?.trim()?.takeIf { it.isNotBlank() } ?: deviceKey,
+                locationName = request.locationName?.trim()?.takeIf { it.isNotBlank() },
+                type = resolveDeviceType(request.type),
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        val issued = getOrCreateApiKey(device)
+
+        return RegisterDeviceResponse(
+            devices = listOf(device.toResponse()),
+            apiKey = issued.rawKey,
+        )
+    }
+
+    private fun generateUniqueClaimCode(): String {
+        repeat(MAX_GENERATION_ATTEMPTS) {
+            val code = claimCodeGenerator.generate()
+            if (!claimCodeRepository.existsByCode(code)) return code
+        }
+        throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "클레임 코드 생성에 실패했습니다.")
+    }
+
+    private fun generateUniqueDeviceKey(): String {
+        repeat(MAX_GENERATION_ATTEMPTS) {
+            val key = UUID.randomUUID().toString().replace("-", "")
+            if (!deviceRepository.existsByDeviceKey(key)) return key
+        }
+        throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "device_key 생성에 실패했습니다.")
+    }
+
+    // api key는 디바이스 단위로 1개 유지.
+    // 디바이스 생성 직후 호출되므로 보통 신규 발급되며 raw 키를 함께 반환(1회성).
+    // 이미 키가 있는 디바이스면 raw 는 알 수 없으므로 null.
+    private fun getOrCreateApiKey(device: Device): IssuedApiKey {
+        val deviceId = device.id ?: throw ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "디바이스 정보가 올바르지 않습니다.",
+        )
+        userApiKeyRepository.findByDeviceId(deviceId)?.let {
+            return IssuedApiKey(apiKey = it, rawKey = null)
+        }
 
         val generated = apiKeyGenerator.generate()
         val now = LocalDateTime.now()
-        return userApiKeyRepository.save(
+        val saved = userApiKeyRepository.save(
             UserApiKey(
                 user = device.user,
+                device = device,
                 apiKeyHash = generated.apiKeyHash,
                 keyPrefix = generated.keyPrefix,
                 name = device.name,
@@ -108,7 +200,14 @@ class DeviceService(
                 updatedAt = now,
             )
         )
+        return IssuedApiKey(apiKey = saved, rawKey = generated.rawKey)
     }
+
+    // getOrCreateApiKey 결과. rawKey 는 이번 호출에서 새로 발급된 경우에만 채워진다(1회성).
+    private data class IssuedApiKey(
+        val apiKey: UserApiKey,
+        val rawKey: String?,
+    )
 
     private fun Device.toResponse() = DeviceResponse(
         id = id ?: 0L,
@@ -116,11 +215,29 @@ class DeviceService(
         deviceKey = deviceKey,
         name = name,
         locationName = locationName,
+        type = type,
         status = status,
         lastSeenAt = lastSeenAt,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
+
+    // 요청의 device type 을 검증해 반환. 미입력 시 기본값(TEMP_HUMIDITY)
+    private fun resolveDeviceType(raw: String?): String {
+        val type = raw?.trim()?.takeIf { it.isNotBlank() } ?: Device.TYPE_TEMP_HUMIDITY
+        if (type !in Device.TYPES) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "지원하지 않는 device type 입니다. (${Device.TYPES.joinToString(", ")})",
+            )
+        }
+        return type
+    }
+
+    companion object {
+        // 클레임 코드/device_key 고유값 생성 시 충돌 재시도 횟수
+        private const val MAX_GENERATION_ATTEMPTS = 10
+    }
 }
 
 fun String?.trimRequired(fieldName: String): String =

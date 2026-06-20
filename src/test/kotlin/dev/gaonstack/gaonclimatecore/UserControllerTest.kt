@@ -35,10 +35,18 @@ class UserControllerTest(
     private fun savedUser(): User =
         userRepository.save(User(email = uniqueEmail(), name = "테스트"))
 
-    // 로그인 테스트용 — BCrypt 패스워드를 직접 세팅하여 저장
+    // 로그인 테스트용 — BCrypt 패스워드를 직접 세팅하고 ACTIVE 상태로 저장(가입 기본값 PENDING 이라 로그인 불가)
     private fun savedUserWithPassword(email: String, rawPassword: String): User {
         val hash = BCrypt.hashpw(rawPassword + "test-pepper-key-0", BCrypt.gensalt())
-        return userRepository.save(User(email = email, name = "테스트", password = hash, passwordKeyIndex = 0))
+        return userRepository.save(
+            User(
+                email = email,
+                name = "테스트",
+                password = hash,
+                passwordKeyIndex = 0,
+                status = User.STATUS_ACTIVE,
+            )
+        )
     }
 
     private fun savedDevice(user: User, locationName: String? = null): Device =
@@ -139,7 +147,7 @@ class UserControllerTest(
         }
             .andExpect {
                 status { isUnauthorized() }
-                jsonPath("$.code") { value("UNAUTHORIZED") }
+                jsonPath("$.code") { value("INVALID_CREDENTIALS") }
             }
     }
 

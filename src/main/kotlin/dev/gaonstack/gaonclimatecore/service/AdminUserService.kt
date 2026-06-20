@@ -28,7 +28,7 @@ class AdminUserService(
         return AdminUserLookupResponse(
             user = user.toResponse(),
             devices = adminUserLookupRepository.findDevices(userId).map { it.toResponse() },
-            apiKey = adminUserLookupRepository.findApiKey(userId)?.toResponse(),
+            apiKeys = adminUserLookupRepository.findApiKeys(userId).map { it.toResponse() },
         )
     }
 
@@ -47,6 +47,7 @@ class AdminUserService(
         deviceKey = deviceKey,
         name = name,
         locationName = locationName,
+        type = type,
         status = status,
         lastSeenAt = lastSeenAt,
         createdAt = createdAt,
@@ -55,6 +56,7 @@ class AdminUserService(
 
     private fun UserApiKey.toResponse() = ApiKeyResponse(
         id = id ?: 0L,
+        deviceId = device.id ?: 0L,
         apiKeyHash = apiKeyHash,
         keyPrefix = keyPrefix,
         name = name,

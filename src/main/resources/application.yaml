@@ -33,3 +33,7 @@ app:
     history:
       window-seconds: ${APP_CLIMATE_HISTORY_WINDOW_SECONDS:3600}
       bucket-seconds: ${APP_CLIMATE_HISTORY_BUCKET_SECONDS:600}
+  device:
+    claim-code:
+      # 디바이스 클레임 코드 유효 시간(초). 기본 10분
+      ttl-seconds: ${APP_DEVICE_CLAIM_CODE_TTL_SECONDS:600}
