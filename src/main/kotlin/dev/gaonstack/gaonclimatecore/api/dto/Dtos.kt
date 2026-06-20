@@ -189,6 +189,12 @@ data class LoginResponse(
     val refreshToken: String,
 )
 
+// 2.2.5. 토큰 재발급 요청 (리프레쉬 토큰을 바디로 수신)
+data class TokenReissueRequest(
+    @JsonProperty("refresh_token")
+    val refreshToken: String?,
+)
+
 // 2.2.3. 유저 디바이스 목록 응답 항목
 data class UserDeviceResponse(
     val id: Long,

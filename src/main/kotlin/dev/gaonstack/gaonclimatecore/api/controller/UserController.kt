@@ -3,6 +3,7 @@ package dev.gaonstack.gaonclimatecore.api.controller
 import dev.gaonstack.gaonclimatecore.api.dto.LoginRequest
 import dev.gaonstack.gaonclimatecore.api.dto.LoginResponse
 import dev.gaonstack.gaonclimatecore.api.dto.SignUpRequest
+import dev.gaonstack.gaonclimatecore.api.dto.TokenReissueRequest
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceMeasurementResponse
 import dev.gaonstack.gaonclimatecore.api.dto.UserDeviceResponse
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedJwtUser
@@ -33,6 +34,12 @@ class UserController(
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): LoginResponse {
         return userService.login(request)
+    }
+
+    // 2.2.5. 토큰 재발급: 리프레쉬 토큰을 바디로 받아 액세스토큰/리프레쉬토큰 재발급(회전). 인증 불필요.
+    @PostMapping("/refresh")
+    fun reissue(@RequestBody request: TokenReissueRequest): LoginResponse {
+        return userService.reissue(request)
     }
 
     // 2.2.3. 유저 디바이스 목록 조회: JWT 인증 필요, 본인 소유 디바이스 목록 반환
