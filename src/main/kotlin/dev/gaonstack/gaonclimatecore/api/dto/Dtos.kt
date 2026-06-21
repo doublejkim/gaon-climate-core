@@ -122,8 +122,9 @@ data class RegisterDeviceResponse(
 data class ClaimCodeResponse(
     @JsonProperty("claim_code")
     val claimCode: String,
-    @JsonProperty("expires_at")
-    val expiresAt: LocalDateTime,
+    // 발급 시점 기준 남은 유효시간(초). 웹에서 이 값으로 카운트다운한다(클라이언트 시계 무관)
+    @JsonProperty("expires_in")
+    val expiresIn: Long,
 )
 
 // 2.1.4. 디바이스 클레임 요청 (디바이스가 클레임 코드로 자가 등록)
