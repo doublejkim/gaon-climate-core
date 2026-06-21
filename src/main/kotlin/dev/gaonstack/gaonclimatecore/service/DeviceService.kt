@@ -9,9 +9,7 @@ import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
 import dev.gaonstack.gaonclimatecore.api.response.BusinessException
 import dev.gaonstack.gaonclimatecore.api.response.ErrorCode
 import dev.gaonstack.gaonclimatecore.domain.Device
-import dev.gaonstack.gaonclimatecore.domain.DeviceClaimCode
 import dev.gaonstack.gaonclimatecore.domain.UserApiKey
-import dev.gaonstack.gaonclimatecore.repository.DeviceClaimCodeRepository
 import dev.gaonstack.gaonclimatecore.repository.DeviceRepository
 import dev.gaonstack.gaonclimatecore.repository.UserApiKeyRepository
 import dev.gaonstack.gaonclimatecore.repository.UserRepository
@@ -20,6 +18,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -29,7 +28,7 @@ class DeviceService(
     private val userRepository: UserRepository,
     private val userApiKeyRepository: UserApiKeyRepository,
     private val apiKeyGenerator: ApiKeyGenerator,
-    private val claimCodeRepository: DeviceClaimCodeRepository,
+    private val claimCodeStore: ClaimCodeStore,
     private val claimCodeGenerator: ClaimCodeGenerator,
     @Value("\${app.device.claim-code.ttl-seconds:600}")
     private val claimCodeTtlSeconds: Long,
@@ -102,50 +101,41 @@ class DeviceService(
     }
 
     // 2.1.3. 디바이스 클레임 코드 발급: JWT 인증된 유저에게 일회용 코드를 발급한다(디바이스 온보딩용)
-    @Transactional
+    @Transactional(readOnly = true)
     fun issueClaimCode(userId: Long): ClaimCodeResponse {
-        val user = userRepository.findById(userId).orElseThrow {
-            ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 사용자입니다.")
+        // 유효한 유저인지만 확인(코드에는 userId 만 보관)
+        if (!userRepository.existsById(userId)) {
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 사용자입니다.")
         }
-        val now = LocalDateTime.now()
-        val saved = claimCodeRepository.save(
-            DeviceClaimCode(
-                user = user,
-                code = generateUniqueClaimCode(),
-                // 저장 만료시각에는 여유(grace) 시간을 더해, 클라이언트 카운트다운이 0이 되는 순간의
-                // 네트워크 지연/막판 제출도 만료로 처리되지 않게 한다.
-                expiresAt = now.plusSeconds(claimCodeTtlSeconds + CLAIM_CODE_GRACE_SECONDS),
-                createdAt = now,
-            )
+        val code = generateUniqueClaimCode()
+        // 저장 TTL 에는 여유(grace) 시간을 더해, 클라이언트 카운트다운이 0이 되는 순간의
+        // 네트워크 지연/막판 제출도 만료로 처리되지 않게 한다.
+        claimCodeStore.issue(
+            code = code,
+            userId = userId,
+            ttl = Duration.ofSeconds(claimCodeTtlSeconds + CLAIM_CODE_GRACE_SECONDS),
         )
         // 응답에는 grace 를 제외한 설정 TTL 을 내려, 웹이 설정값(예: 10분)부터 카운트하게 한다
-        return ClaimCodeResponse(claimCode = saved.code, expiresIn = claimCodeTtlSeconds)
+        return ClaimCodeResponse(claimCode = code, expiresIn = claimCodeTtlSeconds)
     }
 
     // 2.1.4. 디바이스 클레임: 디바이스가 클레임 코드로 자가 등록한다.
-    // 코드 검증 → device_key 자동 생성 → 디바이스 저장 → api key 발급(유저 단위) → 코드 1회용 소멸
+    // 코드 1회용 소멸 → device_key 자동 생성 → 디바이스 저장 → api key 발급(유저 단위)
     @Transactional
     fun claimDevice(request: DeviceClaimRequest): RegisterDeviceResponse {
         val code = request.claimCode.trimRequired("claim_code").uppercase()
-        val claim = claimCodeRepository.findByCode(code)
+        // 조회+소멸을 원자적으로 처리. 없거나 만료/이미 사용된 코드는 모두 null → 유효하지 않음
+        val userId = claimCodeStore.consume(code)
             ?: throw BusinessException(ErrorCode.INVALID_CLAIM_CODE)
+        val user = userRepository.findById(userId).orElseThrow {
+            ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 사용자입니다.")
+        }
 
         val now = LocalDateTime.now()
-        if (claim.isUsed()) {
-            throw BusinessException(ErrorCode.CLAIM_CODE_ALREADY_USED)
-        }
-        if (claim.isExpired(now)) {
-            throw BusinessException(ErrorCode.CLAIM_CODE_EXPIRED)
-        }
-
-        // 코드 1회용 처리(소멸)
-        claim.usedAt = now
-        claimCodeRepository.save(claim)
-
         val deviceKey = generateUniqueDeviceKey()
         val device = deviceRepository.save(
             Device(
-                user = claim.user,
+                user = user,
                 deviceKey = deviceKey,
                 name = request.name?.trim()?.takeIf { it.isNotBlank() } ?: deviceKey,
                 locationName = request.locationName?.trim()?.takeIf { it.isNotBlank() },
@@ -165,7 +155,7 @@ class DeviceService(
     private fun generateUniqueClaimCode(): String {
         repeat(MAX_GENERATION_ATTEMPTS) {
             val code = claimCodeGenerator.generate()
-            if (!claimCodeRepository.existsByCode(code)) return code
+            if (!claimCodeStore.exists(code)) return code
         }
         throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "클레임 코드 생성에 실패했습니다.")
     }

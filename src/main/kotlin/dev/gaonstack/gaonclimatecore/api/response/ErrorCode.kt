@@ -23,8 +23,6 @@ enum class ErrorCode(
     REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레쉬 토큰입니다."),
 
-    // 디바이스 클레임 코드
+    // 디바이스 클레임 코드 — 메모리 저장소는 없음/만료/사용완료를 구분하지 않고 모두 '유효하지 않음'으로 처리
     INVALID_CLAIM_CODE(HttpStatus.NOT_FOUND, "유효하지 않은 클레임 코드입니다."),
-    CLAIM_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 클레임 코드입니다."),
-    CLAIM_CODE_ALREADY_USED(HttpStatus.CONFLICT, "이미 사용된 클레임 코드입니다."),
 }

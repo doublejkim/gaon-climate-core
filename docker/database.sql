@@ -88,20 +88,8 @@ CREATE TABLE refresh_tokens (
                                     UNIQUE (refresh_token)
 ) COMMENT = '리프레쉬 토큰';
 
-CREATE TABLE device_claim_codes (
-                                    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '디바이스 클레임 코드 ID',
-                                    user_id BIGINT NOT NULL COMMENT '사용자 ID',
-                                    code VARCHAR(32) NOT NULL COMMENT '클레임 코드 (대문자, 예: GAON-XXXX-XXXX)',
-                                    expires_at DATETIME(6) NOT NULL COMMENT '만료 일시',
-                                    used_at DATETIME(6) NULL COMMENT '사용 완료 일시 (NULL 이면 미사용)',
-                                    created_at DATETIME(6) NOT NULL COMMENT '생성 일시',
-
-                                    CONSTRAINT fk_device_claim_codes_user
-                                        FOREIGN KEY (user_id) REFERENCES users(id),
-
-                                    CONSTRAINT uk_device_claim_codes_code
-                                        UNIQUE (code)
-) COMMENT = '디바이스 클레임 코드';
+-- NOTE: 디바이스 클레임 코드는 단기 TTL 토큰이라 DB 가 아닌 in-process 캐시(Caffeine)에 보관한다.
+-- 다중 인스턴스로 전환 시 ClaimCodeStore 를 Redis 구현으로 교체한다.
 
 
 -- Test 용 초기 데이터
