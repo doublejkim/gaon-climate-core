@@ -37,6 +37,9 @@ dependencies {
     // Discord
     implementation("net.dv8tion:JDA:5.0.0")
 
+    // In-process cache (디바이스 클레임 코드 등 단기 TTL 저장용)
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
