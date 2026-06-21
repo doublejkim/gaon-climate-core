@@ -112,11 +112,14 @@ class DeviceService(
             DeviceClaimCode(
                 user = user,
                 code = generateUniqueClaimCode(),
-                expiresAt = now.plusSeconds(claimCodeTtlSeconds),
+                // 저장 만료시각에는 여유(grace) 시간을 더해, 클라이언트 카운트다운이 0이 되는 순간의
+                // 네트워크 지연/막판 제출도 만료로 처리되지 않게 한다.
+                expiresAt = now.plusSeconds(claimCodeTtlSeconds + CLAIM_CODE_GRACE_SECONDS),
                 createdAt = now,
             )
         )
-        return ClaimCodeResponse(claimCode = saved.code, expiresAt = saved.expiresAt)
+        // 응답에는 grace 를 제외한 설정 TTL 을 내려, 웹이 설정값(예: 10분)부터 카운트하게 한다
+        return ClaimCodeResponse(claimCode = saved.code, expiresIn = claimCodeTtlSeconds)
     }
 
     // 2.1.4. 디바이스 클레임: 디바이스가 클레임 코드로 자가 등록한다.
@@ -237,6 +240,10 @@ class DeviceService(
     companion object {
         // 클레임 코드/device_key 고유값 생성 시 충돌 재시도 횟수
         private const val MAX_GENERATION_ATTEMPTS = 10
+
+        // 클레임 코드 저장 만료시각에 더하는 여유(grace) 시간(초).
+        // 응답 expires_in(설정 TTL) 보다 실제 만료를 살짝 뒤로 두어 막판 제출을 보호한다.
+        private const val CLAIM_CODE_GRACE_SECONDS = 2L
     }
 }
 
