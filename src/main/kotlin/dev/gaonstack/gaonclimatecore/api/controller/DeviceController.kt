@@ -2,8 +2,8 @@ package dev.gaonstack.gaonclimatecore.api.controller
 
 import dev.gaonstack.gaonclimatecore.api.dto.ClaimCodeResponse
 import dev.gaonstack.gaonclimatecore.api.dto.DeviceClaimRequest
+import dev.gaonstack.gaonclimatecore.api.dto.DeviceRegistrationResponse
 import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceRequest
-import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedJwtUser
 import dev.gaonstack.gaonclimatecore.auth.AuthenticatedUser
 import dev.gaonstack.gaonclimatecore.auth.JwtAuth
@@ -26,7 +26,7 @@ class DeviceController(
     fun register(
         user: AuthenticatedUser,
         @RequestBody request: RegisterDeviceRequest,
-    ): RegisterDeviceResponse {
+    ): DeviceRegistrationResponse {
         return deviceService.registerFromDevice(user.userId, request)
     }
 
@@ -41,7 +41,7 @@ class DeviceController(
     // 2.1.4. 디바이스 클레임: 디바이스가 클레임 코드로 자가 등록(인증 불필요, 코드 자체가 자격)
     @PostMapping("/claim")
     @ResponseStatus(HttpStatus.CREATED)
-    fun claim(@RequestBody request: DeviceClaimRequest): RegisterDeviceResponse {
+    fun claim(@RequestBody request: DeviceClaimRequest): DeviceRegistrationResponse {
         return deviceService.claimDevice(request)
     }
 }

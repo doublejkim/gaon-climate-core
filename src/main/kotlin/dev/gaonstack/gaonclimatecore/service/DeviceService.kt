@@ -3,6 +3,7 @@ package dev.gaonstack.gaonclimatecore.service
 import dev.gaonstack.gaonclimatecore.api.dto.AdminCreateDeviceRequest
 import dev.gaonstack.gaonclimatecore.api.dto.ClaimCodeResponse
 import dev.gaonstack.gaonclimatecore.api.dto.DeviceClaimRequest
+import dev.gaonstack.gaonclimatecore.api.dto.DeviceRegistrationResponse
 import dev.gaonstack.gaonclimatecore.api.dto.DeviceResponse
 import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceRequest
 import dev.gaonstack.gaonclimatecore.api.dto.RegisterDeviceResponse
@@ -35,7 +36,7 @@ class DeviceService(
 ) {
     // 2.1.1. 디바이스 등록 및 api key 생성: device_key 중복 확인 후 디바이스 저장, 유저 단위 api key 없으면 신규 발급
     @Transactional
-    fun registerFromDevice(userId: Long, request: RegisterDeviceRequest): RegisterDeviceResponse {
+    fun registerFromDevice(userId: Long, request: RegisterDeviceRequest): DeviceRegistrationResponse {
         val user = userRepository.findById(userId).orElseThrow {
             ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 사용자입니다.")
         }
@@ -59,8 +60,8 @@ class DeviceService(
         )
         val issued = getOrCreateApiKey(device)
 
-        return RegisterDeviceResponse(
-            devices = listOf(device.toResponse()),
+        return DeviceRegistrationResponse(
+            device = device.toResponse(),
             apiKey = issued.rawKey,
         )
     }
@@ -122,7 +123,7 @@ class DeviceService(
     // 2.1.4. 디바이스 클레임: 디바이스가 클레임 코드로 자가 등록한다.
     // 코드 1회용 소멸 → device_key 자동 생성 → 디바이스 저장 → api key 발급(유저 단위)
     @Transactional
-    fun claimDevice(request: DeviceClaimRequest): RegisterDeviceResponse {
+    fun claimDevice(request: DeviceClaimRequest): DeviceRegistrationResponse {
         val code = request.claimCode.trimRequired("claim_code").uppercase()
         // 조회+소멸을 원자적으로 처리. 없거나 만료/이미 사용된 코드는 모두 null → 유효하지 않음
         val userId = claimCodeStore.consume(code)
@@ -146,8 +147,8 @@ class DeviceService(
         )
         val issued = getOrCreateApiKey(device)
 
-        return RegisterDeviceResponse(
-            devices = listOf(device.toResponse()),
+        return DeviceRegistrationResponse(
+            device = device.toResponse(),
             apiKey = issued.rawKey,
         )
     }

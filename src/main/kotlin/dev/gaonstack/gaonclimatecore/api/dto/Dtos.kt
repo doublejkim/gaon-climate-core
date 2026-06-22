@@ -110,8 +110,18 @@ data class ApiKeyResponse(
     val updatedAt: LocalDateTime,
 )
 
+// 관리자용 디바이스 생성 응답. 관리자는 한 번에 여러 디바이스를 다룰 수 있어 목록 형태를 유지한다.
 data class RegisterDeviceResponse(
     val devices: List<DeviceResponse>,
+    // 신규 발급 시에만 채워지는 raw api key(1회성). 기존 키 재사용 시 null —
+    // 이 경우 이미 발급받아 보관 중인 키를 그대로 사용한다.
+    @JsonProperty("api_key")
+    val apiKey: String?,
+)
+
+// 디바이스 단건 등록/클레임 응답(2.1.1, 2.1.4). 항상 디바이스 1개만 다루므로 단수로 응답한다.
+data class DeviceRegistrationResponse(
+    val device: DeviceResponse,
     // 신규 발급 시에만 채워지는 raw api key(1회성). 기존 키 재사용 시 null —
     // 이 경우 이미 발급받아 보관 중인 키를 그대로 사용한다.
     @JsonProperty("api_key")
