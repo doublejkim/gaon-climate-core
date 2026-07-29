@@ -28,7 +28,10 @@ services:
       LOG_PATH: /logs
       TZ: ${TZ:-Asia/Seoul}
     volumes:
-      - app_logs:/logs
+      # 호스트의 실제 디렉토리에 로그를 기록한다. HOST_LOG_DIR 는 절대경로로 .env 에서 주입한다.
+      # 예) HOST_LOG_DIR=/home/<user>/app/logs/gaon-climate-core
+      # logback 의 maxHistory/cleanHistoryOnStart 정책이 이 호스트 파일까지 직접 정리한다.
+      - ${HOST_LOG_DIR:?HOST_LOG_DIR is required}:/logs
     # Traefik 라우팅 라벨. 'climate-api' 는 Traefik 내부 라우터/서비스 식별자(임의 이름)일 뿐 도메인이 아니다.
     # 실제 API 도메인은 코드에 박지 않고 .env 의 API_DOMAIN 으로 주입한다(미설정 시 빈 값이 되어 라우팅이 매칭되지 않음).
     # Host() 백틱과 ${API_DOMAIN} 치환을 함께 쓰기 위해 라벨 전체를 큰따옴표로 감싼다.
@@ -37,9 +40,6 @@ services:
       - "traefik.http.routers.climate-api.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.climate-api.entrypoints=web"
       - "traefik.http.services.climate-api.loadbalancer.server.port=8080"
-
-volumes:
-  app_logs:
 
 networks:
   proxy-net:
